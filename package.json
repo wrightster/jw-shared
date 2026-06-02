@@ -7,7 +7,13 @@
     "./api": "./src/api.ts",
     "./components/ListingCard.astro": "./src/components/ListingCard.astro",
     "./components/ListingRow.astro": "./src/components/ListingRow.astro",
-    "./styles/tokens.css": "./src/styles/tokens.css",
-    "./styles/listings.css": "./src/styles/listings.css"
+    "./styles/tokens.css": {
+      "style": "./src/styles/tokens.css",
+      "default": "./src/styles/tokens.css"
+    },
+    "./styles/components.css": {
+      "style": "./src/styles/components.css",
+      "default": "./src/styles/components.css"
+    }
   }
 }
