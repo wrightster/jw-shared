@@ -1,0 +1,392 @@
+// Canonical client for office.jwrgnc.com/api/v1, shared between JWRG and JWLC.
+//
+// JWLC is the reference. Fetchers take an explicit `site` argument so each
+// app's local `src/lib/api.ts` binds its own slug ('jwrg' | 'jwlc') and
+// re-exports the bound versions. Helpers that don't need a site (formatters,
+// type guards, `normalizeListingLabel`, neighborhood / listing detail
+// fetchers) are pure and used as-is.
+
+export const BASE_URL = 'https://office.jwrgnc.com/api/v1';
+
+// ---------- Photos ----------
+
+export interface ApiPhotoVariant {
+  width: number | null;
+  height: number | null;
+  jpg: string | null;
+  webp: string | null;
+  avif: string | null;
+}
+
+export interface ApiPhoto {
+  id: string;
+  order: number;
+  caption: string | null;
+  alt: string | null;
+  is_primary: boolean;
+  urls: {
+    '400': ApiPhotoVariant;
+    '800': ApiPhotoVariant;
+    '1200': ApiPhotoVariant;
+    '1600': ApiPhotoVariant;
+    original: string | null;
+  };
+}
+
+/**
+ * Pick a single jpg URL for a photo at a target width rung.
+ * Falls back to `original` if the requested rung hasn't rendered yet
+ * (conversions queue async on the office side; URLs may briefly be null).
+ */
+export function photoSrc(
+  photo: ApiPhoto | null | undefined,
+  width: 400 | 800 | 1200 | 1600 = 800,
+): string | null {
+  if (!photo) return null;
+  const variant = photo.urls[String(width) as '400' | '800' | '1200' | '1600'];
+  return variant?.jpg ?? photo.urls.original;
+}
+
+// ---------- Documents ----------
+
+export interface ApiDocument {
+  id: string;
+  title: string;
+  description: string | null;
+  document_type: string;
+  sort_order: number;
+  is_public: boolean;
+  url: string | null;
+  expires_at: string | null;
+}
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  contract: 'Contract',
+  addendum: 'Addendum',
+  disclosure: 'Disclosure',
+  inspection_report: 'Inspection Report',
+  appraisal: 'Appraisal',
+  title_report: 'Title Report',
+  survey: 'Survey',
+  plat: 'Plat',
+  hoa_docs: 'HOA Docs',
+  tax_record: 'Tax Record',
+  insurance: 'Insurance',
+  license: 'License',
+  marketing: 'Marketing',
+  photo: 'Photo',
+  correspondence: 'Correspondence',
+  other: 'Other',
+};
+
+export function documentTypeLabel(type: string | null | undefined): string {
+  if (!type) return 'Document';
+  return (
+    DOCUMENT_TYPE_LABELS[type] ??
+    type
+      .split('_')
+      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ''))
+      .join(' ')
+  );
+}
+
+// ---------- Listings ----------
+
+export interface ApiListing {
+  id: string;
+  slug: string;
+  mls_number: string | null;
+  marketing_title: string | null;
+  status: 'active' | 'coming_soon' | 'pending' | 'under_contract' | 'sold';
+  status_label: string;
+  featured: boolean;
+  property_type: string | null;
+  listing_type: string | null;
+  address: string;
+  address_line_2: string | null;
+  city: string;
+  state: string;
+  zip: string | null;
+  county: string;
+  latitude: number | null;
+  longitude: number | null;
+  list_price: string;
+  original_price: string | null;
+  sold_price: string | null;
+  bedrooms: number | null;
+  bathrooms_full: number | null;
+  bathrooms_half: number | null;
+  sqft: number | null;
+  lot_size_sqft: number | null;
+  lot_size_acres: string | null;
+  year_built: number | null;
+  garage_spaces: number | null;
+  stories: number | null;
+  hoa_fee: string | null;
+  hoa_frequency: string | null;
+  description: string;
+  full_description: string | null;
+  directions: string | null;
+  features: string[];
+  virtual_tour_url: string | null;
+  list_date: string | null;
+  sold_date: string | null;
+  days_on_market: number | null;
+  agent: { name: string; phone: string } | null;
+  co_agent: { name: string; phone: string } | null;
+  primary_photo: ApiPhoto | null;
+  photo_count: number;
+  // Detail-only
+  photos?: ApiPhoto[];
+  documents?: ApiDocument[];
+}
+
+export type PublicStatus = 'available' | 'pending' | 'sold';
+
+export function publicStatus(status: ApiListing['status']): PublicStatus {
+  switch (status) {
+    case 'active':
+    case 'coming_soon':
+      return 'available';
+    case 'pending':
+    case 'under_contract':
+      return 'pending';
+    case 'sold':
+      return 'sold';
+  }
+}
+
+/**
+ * JWLC's label rewrite: surface 'active' listings as "Available" instead of
+ * "Active". Opt-in — each site's shim decides whether to apply it.
+ */
+export function normalizeListingLabel(listing: ApiListing): ApiListing {
+  if (listing.status === 'active') return { ...listing, status_label: 'Available' };
+  return listing;
+}
+
+// ---------- Formatters ----------
+
+export function formatPrice(price: string | null | undefined): string {
+  if (!price) return '—';
+  const n = parseFloat(price);
+  if (Number.isNaN(n)) return '—';
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+
+export function formatAcres(acres: string | null): string {
+  if (!acres) return '';
+  const n = parseFloat(acres);
+  if (Number.isNaN(n)) return '';
+  return (n % 1 === 0 ? n.toFixed(0) : n.toString()) + ' ac';
+}
+
+export function formatSqft(sqft: number | null): string {
+  if (!sqft) return '';
+  return sqft.toLocaleString('en-US') + ' sqft';
+}
+
+export function formatBedsBaths(l: ApiListing): string {
+  const parts: string[] = [];
+  if (l.bedrooms) parts.push(`${l.bedrooms} bd`);
+  const baths = (l.bathrooms_full ?? 0) + (l.bathrooms_half ?? 0) * 0.5;
+  if (baths) parts.push(`${baths} ba`);
+  return parts.join(' · ');
+}
+
+// ---------- Listing fetchers ----------
+
+export interface ListingsQuery {
+  featured?: boolean;
+  county?: string;
+  city?: string;
+  status?: ApiListing['status'];
+  perPage?: number;
+}
+
+function buildListingsUrl(site: string, q: ListingsQuery, page?: number): string {
+  const params = new URLSearchParams();
+  params.set('site', site);
+  params.set('per_page', String(q.perPage ?? 50));
+  if (q.featured) params.set('featured', '1');
+  if (q.county) params.set('county', q.county);
+  if (q.city) params.set('city', q.city);
+  if (q.status) params.set('status', q.status);
+  if (page) params.set('page', String(page));
+  return `${BASE_URL}/listings?${params}`;
+}
+
+export async function fetchListings(
+  site: string,
+  q: ListingsQuery = {},
+): Promise<ApiListing[]> {
+  try {
+    const res = await fetch(buildListingsUrl(site, q));
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.data ?? []) as ApiListing[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Walk every page of listings for a site. Use sparingly — the listings index
+ * page wants this; the homepage wants `fetchListings({ perPage: 6 })`.
+ */
+export async function fetchAllListings(
+  site: string,
+  q: ListingsQuery = {},
+): Promise<ApiListing[]> {
+  try {
+    const firstRes = await fetch(buildListingsUrl(site, q, 1));
+    if (!firstRes.ok) return [];
+    const firstJson = await firstRes.json();
+    const all: ApiListing[] = [...(firstJson.data ?? [])];
+    const lastPage: number = firstJson.meta?.last_page ?? 1;
+    if (lastPage > 1) {
+      const rest = await Promise.all(
+        Array.from({ length: lastPage - 1 }, (_, i) => i + 2).map(async (page) => {
+          const res = await fetch(buildListingsUrl(site, q, page));
+          if (!res.ok) return [];
+          return ((await res.json()).data ?? []) as ApiListing[];
+        }),
+      );
+      all.push(...rest.flat());
+    }
+    return all;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchListing(slug: string): Promise<ApiListing | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/listings/${slug}`);
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data as ApiListing;
+  } catch {
+    return null;
+  }
+}
+
+// ---------- Neighborhoods ----------
+
+export interface ApiNeighborhood {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  marketing_description: string | null;
+  status: 'planning' | 'under_development' | 'active_sales' | 'sold_out' | 'established' | null;
+
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  county: string | null;
+  latitude: number | null;
+  longitude: number | null;
+
+  total_lots: number | null;
+  total_phases: number | null;
+
+  hoa: {
+    name: string | null;
+    fee: number | null;
+    frequency: 'monthly' | 'quarterly' | 'annually' | null;
+    contact: string | null;
+  };
+
+  amenities: string[];
+  school_district: string | null;
+  utilities: string[];
+  deed_restrictions_summary: string | null;
+  website_url: string | null;
+
+  primary_photo: ApiPhoto | null;
+  photos?: ApiPhoto[];
+  photo_count?: number;
+  listings_count?: number;
+}
+
+export async function fetchNeighborhoods(): Promise<ApiNeighborhood[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/neighborhoods?per_page=100`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.data ?? []) as ApiNeighborhood[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchNeighborhood(slug: string): Promise<ApiNeighborhood | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/neighborhoods/${slug}`);
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data as ApiNeighborhood;
+  } catch {
+    return null;
+  }
+}
+
+// ---------- Team ----------
+
+export interface ApiTeamMember {
+  id: number;
+  slug: string;
+  name: string;
+  title: string | null;
+  short_bio: string | null;
+  bio: string | null;
+
+  public_email: string | null;
+  public_phone: string | null;
+
+  license_number: string | null;
+  license_state: string | null;
+  license_expiry: string | null;
+
+  specialties: string[];
+  social_links: Record<string, string>;
+  years_experience: number | null;
+
+  sort_order: number | null;
+  published_at: string | null;
+
+  primary_photo: ApiPhoto | null;
+  photos?: ApiPhoto[];
+  photo_count?: number;
+  marketing_sites?: string[];
+}
+
+export async function fetchTeam(site: string): Promise<ApiTeamMember[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/team?site=${site}&per_page=100`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.data ?? []) as ApiTeamMember[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchTeamMember(
+  slug: string,
+  site: string,
+): Promise<ApiTeamMember | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/team/${slug}?site=${site}`);
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data as ApiTeamMember;
+  } catch {
+    return null;
+  }
+}
