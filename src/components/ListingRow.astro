@@ -1,0 +1,61 @@
+---
+// Shared listing row used in list views on both JWRG and JWLC.
+//
+// `headline` is the right-side text above price — JWRG passes
+// beds/baths/sqft; JWLC passes acreage. Each site's local
+// `src/components/ListingRow.astro` is a tiny wrapper that computes the
+// site-appropriate headline and forwards listing through.
+//
+// CSS classes referenced (`listing-row*`) live in @jw/shared/styles/listings.css,
+// imported by each site's global.css.
+
+import type { ApiListing } from '@jw/shared/api';
+import { formatPrice, photoSrc } from '@jw/shared/api';
+
+interface Props {
+  listing: ApiListing;
+  headline?: string;
+}
+
+const { listing, headline } = Astro.props;
+const title = listing.marketing_title || listing.address;
+const image = photoSrc(listing.primary_photo, 800);
+const headlineText = headline ?? '';
+---
+
+<a href={`/listings/${listing.slug}`} class="listing-row">
+  <!-- Thumbnail -->
+  <div class="listing-row-thumb">
+    {image ? (
+      <img src={image} alt={title} class="listing-row-img" loading="lazy" />
+    ) : (
+      <div class="listing-row-img listing-row-img--placeholder"></div>
+    )}
+  </div>
+
+  <!-- Content area (everything right of thumb) -->
+  <div class="listing-row-content">
+    <!-- Main info -->
+    <div class="listing-row-body">
+      <div class="listing-row-meta">
+        <span class="listing-row-status" data-status={listing.status}>
+          {listing.status_label}
+        </span>
+        <span class="listing-row-county">{listing.county} County</span>
+      </div>
+      <h3 class="listing-row-title">{title}</h3>
+    </div>
+
+    <!-- Price + link -->
+    <div class="listing-row-right">
+      <p class="listing-row-acreage">{headlineText}</p>
+      <span class="listing-row-price">{formatPrice(listing.list_price)}</span>
+      <span class="listing-row-link">
+        View Details
+        <svg class="listing-row-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </span>
+    </div>
+  </div>
+</a>

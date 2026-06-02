@@ -1,0 +1,69 @@
+---
+// Shared listing card used in grid views on both JWRG and JWLC.
+//
+// `headline` is the small text under the county pill — JWRG passes
+// beds/baths/sqft; JWLC passes acreage. Each site's local
+// `src/components/ListingCard.astro` is a tiny wrapper that computes its
+// preferred headline and forwards everything else here.
+//
+// CSS classes referenced (`listing-card*`) live in @jw/shared/styles/listings.css,
+// imported by each site's global.css.
+
+import type { ApiListing } from '@jw/shared/api';
+import { formatPrice, photoSrc } from '@jw/shared/api';
+
+interface Props {
+  listing: ApiListing;
+  index?: number;
+  headline?: string;
+}
+
+const { listing, headline } = Astro.props;
+const title = listing.marketing_title || listing.address;
+const image = photoSrc(listing.primary_photo, 800);
+const headlineText = headline || `${listing.city}, ${listing.state}`;
+---
+
+<a href={`/listings/${listing.slug}`} class="listing-card">
+  <!-- Image Header -->
+  <div class="listing-card-image">
+    {image ? (
+      <img src={image} alt={title} class="listing-card-img" loading="lazy" />
+    ) : (
+      <div class="listing-card-img listing-card-img--placeholder"></div>
+    )}
+    <div class="listing-card-gradient"></div>
+    <div class="listing-card-overlay">
+      <div>
+        <p class="listing-card-county">{listing.county} County</p>
+        <p class="listing-card-acreage">{headlineText}</p>
+      </div>
+    </div>
+    {listing.photo_count > 1 && (
+      <span class="listing-card-photos-badge" aria-label={`${listing.photo_count} photos`}>
+        <svg class="listing-card-photos-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 003.75 21z" />
+        </svg>
+        <span aria-hidden="true">{listing.photo_count}</span>
+      </span>
+    )}
+    <span class="listing-card-status" data-status={listing.status}>
+      {listing.status_label}
+    </span>
+  </div>
+
+  <!-- Content -->
+  <div class="listing-card-body">
+    <h3 class="listing-card-title">{title}</h3>
+    <p class="listing-card-desc">{listing.description}</p>
+    <div class="listing-card-footer">
+      <span class="listing-card-price">{formatPrice(listing.list_price)}</span>
+      <span class="listing-card-link">
+        View Details
+        <svg class="listing-card-link-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </span>
+    </div>
+  </div>
+</a>

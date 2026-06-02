@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./api": "./src/api.ts"
+    "./api": "./src/api.ts",
+    "./components/ListingCard.astro": "./src/components/ListingCard.astro",
+    "./components/ListingRow.astro": "./src/components/ListingRow.astro",
+    "./styles/tokens.css": "./src/styles/tokens.css",
+    "./styles/listings.css": "./src/styles/listings.css"
   }
 }

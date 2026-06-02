@@ -1,0 +1,64 @@
+/* Brand tokens shared between JWRG and JWLC (2026 rebrand: red·earth·gold,
+ * Gabarito + Anek Latin). Imported by each site's global.css.
+ *
+ * JWLC is the reference shape. JWRG layers a second @theme block in its own
+ * global.css with migration aliases (navy-*, warm-*, --font-sans, --font-serif)
+ * that point back at these tokens — keeping legacy class references coherent
+ * while the page rewrite continues.
+ *
+ * Tailwind v4 merges multiple @theme blocks; tokens defined here become
+ * `bg-red-600`, `text-earth-900`, etc., in either site automatically.
+ */
+
+@theme {
+  /* Crimson — Dark Accent / Red Clay */
+  --color-red-50:  #fff3f2;
+  --color-red-100: #fde4e1;
+  --color-red-200: #f9c4bc;
+  --color-red-300: #f29388;
+  --color-red-400: #e85f50;
+  --color-red-500: #d14338;
+  --color-red-600: #b52126;  /* ★ Dark Accent / Red Clay — primary site color */
+  --color-red-700: #9e2c20;
+  --color-red-800: #7c2218;
+  --color-red-900: #551710;
+  --color-red-950: #330d09;
+
+  /* Gold — Light Accent / Muted Gold */
+  --color-gold-50:  #fff9f0;
+  --color-gold-100: #fef0d5;
+  --color-gold-200: #fde1ab;
+  --color-gold-300: #ffcf7d;  /* ★ Light Accent / Muted Gold */
+  --color-gold-400: #f5b35a;
+  --color-gold-500: #e89537;
+  --color-gold-600: #c07622;
+  --color-gold-700: #935919;
+  --color-gold-800: #6a3f10;
+  --color-gold-900: #45280a;
+  --color-gold-950: #281706;
+
+  /* Earth */
+  --color-earth-50:  #edeae6;  /* ★ Light Neutral / Clean Bone — page background */
+  --color-earth-75:  #ece2d1;  /* midpoint between earth-50 and earth-100 */
+  --color-earth-100: #ebd9bc;  /* ★ Medium Neutral / Fine Sand — banner / card background */
+  --color-earth-200: #e8d9bb;
+  --color-earth-300: #d4bc96;
+  --color-earth-400: #bb9d72;
+  --color-earth-500: #a48a63;
+  --color-earth-600: #8d7350;
+  --color-earth-700: #745d42;
+  --color-earth-800: #5e4c38;
+  --color-earth-900: #3a3023;  /* ★ Dark Neutral / Rich Soil — main dark text */
+  --color-earth-950: #2a2119;
+
+  --color-light-text: #ffffff;
+  --color-nav-bg:     var(--color-gold-300);
+
+  --font-display: 'Gabarito', Georgia, serif;
+  --font-body:    'Anek Latin', system-ui, sans-serif;
+  --font-display-weight: 700;
+  --font-body-weight:    400;
+
+  /* Border radius — single token controls all rounded-sm usage site-wide */
+  --radius-sm: 2px;
+}
