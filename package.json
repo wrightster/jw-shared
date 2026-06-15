@@ -7,6 +7,7 @@
     "./api": "./src/api.ts",
     "./components/ListingCard.astro": "./src/components/ListingCard.astro",
     "./components/ListingRow.astro": "./src/components/ListingRow.astro",
+    "./components/VideoSection.astro": "./src/components/VideoSection.astro",
     "./styles/tokens.css": {
       "style": "./src/styles/tokens.css",
       "default": "./src/styles/tokens.css"

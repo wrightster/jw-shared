@@ -1,0 +1,101 @@
+---
+// Shared "Video & Tour" section for listing detail / brochure pages.
+//
+// Lazy *facade* players: each tile renders only a poster image + play button.
+// The real player (provider iframe for embeds, native <video playsinline> for
+// uploads) is injected on tap — so visitors who never press play don't pay the
+// cost of loading heavy third-party player JS / video bytes. Big win on mobile
+// (data + Core Web Vitals), and playsinline keeps iOS from force-fullscreening.
+//
+// Poster falls back to the listing's primary photo when a video has no
+// thumbnail_url (non-YouTube embeds, uploads without a poster).
+//
+// Self-contained styling: Tailwind utilities + brand color tokens only, so it
+// renders identically in every consumer regardless of their component CSS.
+
+import type { ApiVideo } from '@jw/shared/api';
+
+interface Props {
+  videos: ApiVideo[] | undefined;
+  /** Listing primary photo URL, used as the poster fallback. */
+  fallbackPoster?: string | null;
+  heading?: string;
+}
+
+const { videos, fallbackPoster = null, heading = 'Video & Tour' } = Astro.props;
+const items = (videos ?? []).filter((v) => v.is_public && v.playback_url);
+---
+
+{items.length > 0 && (
+  <section class="my-10" data-video-section>
+    <h2 class="font-display text-2xl font-bold text-earth-900 mb-4">{heading}</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {items.map((v) => {
+        const poster = v.thumbnail_url ?? fallbackPoster;
+        return (
+          <figure class="m-0">
+            <div class="relative aspect-video overflow-hidden rounded-sm bg-earth-900">
+              <button
+                type="button"
+                class="jw-video-facade group absolute inset-0 h-full w-full cursor-pointer border-0 p-0"
+                data-kind={v.source}
+                data-playback={v.playback_url}
+                aria-label={`Play ${v.title ?? 'video'}`}
+              >
+                {poster ? (
+                  <img
+                    src={poster}
+                    alt={v.title ?? ''}
+                    class="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span class="absolute inset-0 bg-earth-800"></span>
+                )}
+                <span class="absolute inset-0 bg-black/20 transition-colors group-hover:bg-black/30"></span>
+                <span
+                  class="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-red-600/90 text-earth-50 shadow-lg transition-transform group-hover:scale-110"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" class="ml-1 h-7 w-7" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </span>
+              </button>
+            </div>
+            {v.title && <figcaption class="mt-2 text-sm text-earth-700">{v.title}</figcaption>}
+          </figure>
+        );
+      })}
+    </div>
+
+    <script is:inline>
+      document.querySelectorAll('[data-video-section] .jw-video-facade').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var kind = btn.getAttribute('data-kind');
+          var src = btn.getAttribute('data-playback');
+          if (!src) return;
+          var container = btn.parentElement;
+          var el;
+          if (kind === 'upload') {
+            el = document.createElement('video');
+            el.src = src;
+            el.controls = true;
+            el.autoplay = true;
+            el.setAttribute('playsinline', '');
+            el.className = 'absolute inset-0 h-full w-full bg-black';
+          } else {
+            // Embeds: ask the provider to autoplay since this is a user gesture.
+            var join = src.indexOf('?') === -1 ? '?' : '&';
+            el = document.createElement('iframe');
+            el.src = src + join + 'autoplay=1';
+            el.className = 'absolute inset-0 h-full w-full';
+            el.setAttribute('frameborder', '0');
+            el.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+            el.setAttribute('allowfullscreen', 'true');
+          }
+          container.replaceChild(el, btn);
+        });
+      });
+    </script>
+  </section>
+)}

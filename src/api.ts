@@ -142,6 +142,27 @@ export interface ApiListing {
   // Detail-only
   photos?: ApiPhoto[];
   documents?: ApiDocument[];
+  videos?: ApiVideo[];
+}
+
+export interface ApiVideo {
+  id: string;
+  source: 'embed' | 'upload';
+  provider: string | null;
+  title: string | null;
+  caption: string | null;
+  type: string | null;
+  sort_order: number;
+  is_public: boolean;
+  /** Embed player URL (source=embed). */
+  embed_url: string | null;
+  /** Hosted file URL (source=upload). */
+  file_url: string | null;
+  /** Whichever of embed_url / file_url applies — what the player loads. */
+  playback_url: string | null;
+  /** Poster image; null for non-YouTube — fall back to the listing primary photo. */
+  thumbnail_url: string | null;
+  created_at: string | null;
 }
 
 export type PublicStatus = 'available' | 'pending' | 'sold';
