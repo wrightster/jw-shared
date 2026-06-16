@@ -47,6 +47,60 @@ export function photoSrc(
   return variant?.jpg ?? photo.urls.original;
 }
 
+const PHOTO_RUNGS: ('400' | '800' | '1200' | '1600')[] = ['400', '800', '1200', '1600'];
+
+/**
+ * Build a `srcset` string for one format across whichever width rungs have
+ * rendered. Returns null when no rung carries that format yet (e.g. avif not
+ * generated), so callers can omit the `<source>`.
+ */
+export function photoSrcSet(
+  photo: ApiPhoto | null | undefined,
+  format: 'jpg' | 'webp' | 'avif',
+): string | null {
+  if (!photo) return null;
+  const parts: string[] = [];
+  for (const rung of PHOTO_RUNGS) {
+    const variant = photo.urls[rung];
+    const url = variant?.[format];
+    if (url && variant.width) parts.push(`${url} ${variant.width}w`);
+  }
+  return parts.length ? parts.join(', ') : null;
+}
+
+/**
+ * Intrinsic dimensions for a photo at a target rung, for `width`/`height`
+ * attributes that prevent layout shift. Falls back across rungs if the
+ * requested one hasn't rendered dimensions yet.
+ */
+export function photoDimensions(
+  photo: ApiPhoto | null | undefined,
+  width: 400 | 800 | 1200 | 1600 = 800,
+): { width: number; height: number } | null {
+  if (!photo) return null;
+  const order = [String(width), ...PHOTO_RUNGS.filter((r) => r !== String(width))] as (
+    | '400'
+    | '800'
+    | '1200'
+    | '1600'
+  )[];
+  for (const rung of order) {
+    const variant = photo.urls[rung];
+    if (variant?.width && variant.height) {
+      return { width: variant.width, height: variant.height };
+    }
+  }
+  return null;
+}
+
+/**
+ * Descriptive alt text for a listing photo: explicit alt → caption → a composed
+ * "<address> — photo" string. Never the page/listing title.
+ */
+export function photoAlt(photo: ApiPhoto | null | undefined, address: string): string {
+  return photo?.alt || photo?.caption || `${address} — photo`;
+}
+
 // ---------- Documents ----------
 
 export interface ApiDocument {

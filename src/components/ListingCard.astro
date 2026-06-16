@@ -8,9 +8,14 @@
 //
 // CSS classes referenced (`listing-card*`) live in @jw/shared/styles/listings.css,
 // imported by each site's global.css.
+//
+// Markup is an <article> (display:contents so it adds no box) wrapping the
+// clickable <a>, giving agents/crawlers a stable extraction anchor. The image
+// is a <picture> emitting avif/webp/jpg with responsive srcset + intrinsic
+// dimensions (no layout shift); price is a <data> with the numeric value.
 
 import type { ApiListing } from '@jw/shared/api';
-import { formatPrice, photoSrc } from '@jw/shared/api';
+import { formatPrice, photoSrc, photoSrcSet, photoDimensions, photoAlt } from '@jw/shared/api';
 
 interface Props {
   listing: ApiListing;
@@ -20,22 +25,46 @@ interface Props {
 
 const { listing, headline } = Astro.props;
 const title = listing.marketing_title || listing.address;
-const image = photoSrc(listing.primary_photo, 800);
+const photo = listing.primary_photo;
+const image = photoSrc(photo, 800);
+const dims = photoDimensions(photo, 800);
+const avif = photoSrcSet(photo, 'avif');
+const webp = photoSrcSet(photo, 'webp');
+const jpg = photoSrcSet(photo, 'jpg');
+const alt = photoAlt(photo, listing.address);
 const headlineText = headline || `${listing.city}, ${listing.state}`;
+// Cards render one-per-column on mobile, two at sm, three at lg.
+const sizes = '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw';
+const priceValue = parseFloat(listing.list_price);
 ---
 
+<article class="[display:contents]">
 <a href={`/listings/${listing.slug}`} class="listing-card">
   <!-- Image Header -->
   <div class="listing-card-image">
     {image ? (
-      <img src={image} alt={title} class="listing-card-img" loading="lazy" />
+      <picture>
+        {avif && <source type="image/avif" srcset={avif} sizes={sizes} />}
+        {webp && <source type="image/webp" srcset={webp} sizes={sizes} />}
+        <img
+          src={image}
+          srcset={jpg ?? undefined}
+          sizes={jpg ? sizes : undefined}
+          width={dims?.width}
+          height={dims?.height}
+          alt={alt}
+          class="listing-card-img"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
     ) : (
       <div class="listing-card-img listing-card-img--placeholder"></div>
     )}
     <div class="listing-card-gradient"></div>
     <div class="listing-card-overlay">
       <div>
-        <p class="listing-card-county">{listing.county} County</p>
+        <address class="listing-card-county not-italic">{listing.county} County</address>
         <p class="listing-card-acreage">{headlineText}</p>
       </div>
     </div>
@@ -57,7 +86,7 @@ const headlineText = headline || `${listing.city}, ${listing.state}`;
     <h3 class="listing-card-title">{title}</h3>
     <p class="listing-card-desc">{listing.description}</p>
     <div class="listing-card-footer">
-      <span class="listing-card-price">{formatPrice(listing.list_price)}</span>
+      <data class="listing-card-price" value={Number.isNaN(priceValue) ? undefined : String(priceValue)}>{formatPrice(listing.list_price)}</data>
       <span class="listing-card-link">
         View Details
         <svg class="listing-card-link-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -67,3 +96,4 @@ const headlineText = headline || `${listing.city}, ${listing.state}`;
     </div>
   </div>
 </a>
+</article>

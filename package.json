@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./api": "./src/api.ts",
+    "./jsonLd": "./src/jsonLd.ts",
+    "./components/Seo.astro": "./src/components/Seo.astro",
     "./components/ListingCard.astro": "./src/components/ListingCard.astro",
     "./components/ListingRow.astro": "./src/components/ListingRow.astro",
     "./components/VideoSection.astro": "./src/components/VideoSection.astro",

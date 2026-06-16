@@ -1,0 +1,63 @@
+---
+// Shared <head> SEO block for JWRG + JWLC: description, canonical, Open Graph,
+// Twitter Card, and an optional JSON-LD slot. Each site's layout owns charset /
+// viewport / favicon / font links and passes its already-resolved values
+// (absolute canonical + absolute og:image) through here so the tags stay
+// consistent and don't drift between the two sites.
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalUrl: string;
+  siteName: string;
+  /** Absolute og:image URL (social crawlers reject relative paths). */
+  image: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  ogType?: string;
+  /** One object → one <script>; an array emits one block per entry. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description,
+  canonicalUrl,
+  siteName,
+  image,
+  imageAlt,
+  imageWidth = 1200,
+  imageHeight = 630,
+  ogType = 'website',
+  jsonLd,
+} = Astro.props;
+
+const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Open Graph -->
+<meta property="og:type" content={ogType} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={image} />
+<meta property="og:image:width" content={String(imageWidth)} />
+<meta property="og:image:height" content={String(imageHeight)} />
+{imageAlt && <meta property="og:image:alt" content={imageAlt} />}
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={image} />
+{imageAlt && <meta name="twitter:image:alt" content={imageAlt} />}
+
+{jsonLdBlocks.map((obj) => (
+  <script type="application/ld+json" set:html={JSON.stringify(obj)} />
+))}

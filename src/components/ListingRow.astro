@@ -8,9 +8,13 @@
 //
 // CSS classes referenced (`listing-row*`) live in @jw/shared/styles/listings.css,
 // imported by each site's global.css.
+//
+// Markup mirrors ListingCard: an <article> (display:contents) wrapping the
+// clickable <a>, a <picture> thumbnail with avif/webp/jpg + intrinsic dims,
+// the county in <address>, and the price in <data>.
 
 import type { ApiListing } from '@jw/shared/api';
-import { formatPrice, photoSrc } from '@jw/shared/api';
+import { formatPrice, photoSrc, photoSrcSet, photoDimensions, photoAlt } from '@jw/shared/api';
 
 interface Props {
   listing: ApiListing;
@@ -19,15 +23,39 @@ interface Props {
 
 const { listing, headline } = Astro.props;
 const title = listing.marketing_title || listing.address;
-const image = photoSrc(listing.primary_photo, 800);
+const photo = listing.primary_photo;
+const image = photoSrc(photo, 800);
+const dims = photoDimensions(photo, 800);
+const avif = photoSrcSet(photo, 'avif');
+const webp = photoSrcSet(photo, 'webp');
+const jpg = photoSrcSet(photo, 'jpg');
+const alt = photoAlt(photo, listing.address);
 const headlineText = headline ?? '';
+// The thumbnail is a small fixed-ish column on the left of the row.
+const sizes = '(min-width: 640px) 16rem, 40vw';
+const priceValue = parseFloat(listing.list_price);
 ---
 
+<article class="[display:contents]">
 <a href={`/listings/${listing.slug}`} class="listing-row">
   <!-- Thumbnail -->
   <div class="listing-row-thumb">
     {image ? (
-      <img src={image} alt={title} class="listing-row-img" loading="lazy" />
+      <picture>
+        {avif && <source type="image/avif" srcset={avif} sizes={sizes} />}
+        {webp && <source type="image/webp" srcset={webp} sizes={sizes} />}
+        <img
+          src={image}
+          srcset={jpg ?? undefined}
+          sizes={jpg ? sizes : undefined}
+          width={dims?.width}
+          height={dims?.height}
+          alt={alt}
+          class="listing-row-img"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
     ) : (
       <div class="listing-row-img listing-row-img--placeholder"></div>
     )}
@@ -41,7 +69,7 @@ const headlineText = headline ?? '';
         <span class="listing-row-status" data-status={listing.status}>
           {listing.status_label}
         </span>
-        <span class="listing-row-county">{listing.county} County</span>
+        <address class="listing-row-county not-italic">{listing.county} County</address>
       </div>
       <h3 class="listing-row-title">{title}</h3>
     </div>
@@ -49,7 +77,7 @@ const headlineText = headline ?? '';
     <!-- Price + link -->
     <div class="listing-row-right">
       <p class="listing-row-acreage">{headlineText}</p>
-      <span class="listing-row-price">{formatPrice(listing.list_price)}</span>
+      <data class="listing-row-price" value={Number.isNaN(priceValue) ? undefined : String(priceValue)}>{formatPrice(listing.list_price)}</data>
       <span class="listing-row-link">
         View Details
         <svg class="listing-row-arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -59,3 +87,4 @@ const headlineText = headline ?? '';
     </div>
   </div>
 </a>
+</article>
