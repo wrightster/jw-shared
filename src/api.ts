@@ -167,6 +167,7 @@ export interface ApiListing {
   county: string;
   latitude: number | null;
   longitude: number | null;
+  neighborhood: { id: string; name: string; slug: string } | null;
   list_price: string;
   original_price: string | null;
   sold_price: string | null;
@@ -278,6 +279,8 @@ export interface ListingsQuery {
   featured?: boolean;
   county?: string;
   city?: string;
+  /** Neighborhood slug or UUID — restricts to listings in that community. */
+  neighborhood?: string;
   status?: ApiListing['status'];
   perPage?: number;
 }
@@ -289,6 +292,7 @@ function buildListingsUrl(site: string, q: ListingsQuery, page?: number): string
   if (q.featured) params.set('featured', '1');
   if (q.county) params.set('county', q.county);
   if (q.city) params.set('city', q.city);
+  if (q.neighborhood) params.set('neighborhood', q.neighborhood);
   if (q.status) params.set('status', q.status);
   if (page) params.set('page', String(page));
   return `${BASE_URL}/listings?${params}`;
