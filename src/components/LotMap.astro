@@ -143,23 +143,28 @@ const placed = lots
 
 <style>
   .lot-map {
-    /* ── themeable knobs (override under .lot-map in a consumer global.css) ── */
-    --lot-radius: 5px;
-    --lot-fill-opacity: 0.26;
-    --lot-fill-opacity-hover: 0.58;
-    --lot-available-fill: #5a7d63;
-    --lot-available-stroke: #3f5a47;
-    --lot-reserved-fill: #c79a3f;
-    --lot-reserved-stroke: #9a7628;
-    --lot-sold-fill: #9e5563;
-    --lot-sold-stroke: #7c4654;
-    --lot-card-bg: #ffffff;
-    --lot-card-fg: #1f1a17;
-    --lot-card-muted: #6b625a;
-    --lot-card-border: rgba(0, 0, 0, 0.1);
-    --lot-card-accent: currentColor;
-    --lot-card-radius: 10px;
-    --lot-card-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.35);
+    /* ── theming ───────────────────────────────────────────────────────────
+       Public knobs are the --lot-* custom properties below; override any of
+       them under `.lot-map` in a consumer's global.css. We alias each into a
+       private --_* var (with the default inlined as the var() fallback) so the
+       component's own scoped selector never out-specifies a consumer override —
+       consumers set --lot-*, the component only ever reads --_*. */
+    --_radius: var(--lot-radius, 5px);
+    --_fill-opacity: var(--lot-fill-opacity, 0.26);
+    --_fill-opacity-hover: var(--lot-fill-opacity-hover, 0.58);
+    --_available-fill: var(--lot-available-fill, #5a7d63);
+    --_available-stroke: var(--lot-available-stroke, #3f5a47);
+    --_reserved-fill: var(--lot-reserved-fill, #c79a3f);
+    --_reserved-stroke: var(--lot-reserved-stroke, #9a7628);
+    --_sold-fill: var(--lot-sold-fill, #9e5563);
+    --_sold-stroke: var(--lot-sold-stroke, #7c4654);
+    --_card-bg: var(--lot-card-bg, #ffffff);
+    --_card-fg: var(--lot-card-fg, #1f1a17);
+    --_card-muted: var(--lot-card-muted, #6b625a);
+    --_card-border: var(--lot-card-border, rgba(0, 0, 0, 0.1));
+    --_card-accent: var(--lot-card-accent, currentColor);
+    --_card-radius: var(--lot-card-radius, 10px);
+    --_card-shadow: var(--lot-card-shadow, 0 10px 30px -8px rgba(0, 0, 0, 0.35));
 
     position: relative;
     display: block;
@@ -175,7 +180,7 @@ const placed = lots
     display: block;
     width: 100%;
     height: auto;
-    border-radius: var(--lot-radius);
+    border-radius: var(--_radius);
   }
 
   /* ── Hotspots ─────────────────────────────────────────────────────────── */
@@ -189,23 +194,23 @@ const placed = lots
   .lot-hotspot-fill {
     position: absolute;
     inset: 0;
-    border-radius: var(--lot-radius);
-    border: 2px solid var(--hs-stroke, var(--lot-available-stroke));
-    background: var(--hs-fill, var(--lot-available-fill));
-    opacity: var(--lot-fill-opacity);
+    border-radius: var(--_radius);
+    border: 2px solid var(--hs-stroke, var(--_available-stroke));
+    background: var(--hs-fill, var(--_available-fill));
+    opacity: var(--_fill-opacity);
     transition: opacity 0.15s ease, border-width 0.15s ease;
   }
 
-  .lot-hotspot[data-status='available'] { --hs-fill: var(--lot-available-fill); --hs-stroke: var(--lot-available-stroke); }
-  .lot-hotspot[data-status='reserved']  { --hs-fill: var(--lot-reserved-fill);  --hs-stroke: var(--lot-reserved-stroke); }
-  .lot-hotspot[data-status='sold']      { --hs-fill: var(--lot-sold-fill);      --hs-stroke: var(--lot-sold-stroke); }
+  .lot-hotspot[data-status='available'] { --hs-fill: var(--_available-fill); --hs-stroke: var(--_available-stroke); }
+  .lot-hotspot[data-status='reserved']  { --hs-fill: var(--_reserved-fill);  --hs-stroke: var(--_reserved-stroke); }
+  .lot-hotspot[data-status='sold']      { --hs-fill: var(--_sold-fill);      --hs-stroke: var(--_sold-stroke); }
 
   .lot-hotspot:hover .lot-hotspot-fill,
   .lot-hotspot:focus-visible .lot-hotspot-fill {
-    opacity: var(--lot-fill-opacity-hover);
+    opacity: var(--_fill-opacity-hover);
   }
   .lot-hotspot:focus-visible .lot-hotspot-fill {
-    box-shadow: 0 0 0 3px var(--lot-card-bg), 0 0 0 5px var(--hs-stroke);
+    box-shadow: 0 0 0 3px var(--_card-bg), 0 0 0 5px var(--hs-stroke);
   }
 
   /* ── Hover / focus card ───────────────────────────────────────────────── */
@@ -220,11 +225,11 @@ const placed = lots
     width: max-content;
     max-width: 15rem;
     padding: 0.7rem 0.8rem;
-    background: var(--lot-card-bg);
-    color: var(--lot-card-fg);
-    border: 1px solid var(--lot-card-border);
-    border-radius: var(--lot-card-radius);
-    box-shadow: var(--lot-card-shadow);
+    background: var(--_card-bg);
+    color: var(--_card-fg);
+    border: 1px solid var(--_card-border);
+    border-radius: var(--_card-radius);
+    box-shadow: var(--_card-shadow);
     line-height: 1.3;
     text-align: left;
     opacity: 0;
@@ -273,32 +278,32 @@ const placed = lots
     color: #fff;
     white-space: nowrap;
   }
-  .lot-card-status[data-status='available'] { background: var(--lot-available-stroke); }
-  .lot-card-status[data-status='reserved']  { background: var(--lot-reserved-stroke); }
-  .lot-card-status[data-status='sold']      { background: var(--lot-sold-stroke); }
+  .lot-card-status[data-status='available'] { background: var(--_available-stroke); }
+  .lot-card-status[data-status='reserved']  { background: var(--_reserved-stroke); }
+  .lot-card-status[data-status='sold']      { background: var(--_sold-stroke); }
 
   .lot-card-facts {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem 0.6rem;
     font-size: 0.78rem;
-    color: var(--lot-card-muted);
+    color: var(--_card-muted);
   }
-  .lot-card-price { color: var(--lot-card-fg); font-weight: 600; }
+  .lot-card-price { color: var(--_card-fg); font-weight: 600; }
 
   .lot-card-builder {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     font-size: 0.78rem;
-    color: var(--lot-card-muted);
+    color: var(--_card-muted);
   }
   .lot-card-builder-dot {
     width: 0.7rem;
     height: 0.7rem;
     border-radius: 999px;
     flex: none;
-    background: var(--lot-card-accent);
+    background: var(--_card-accent);
   }
   .lot-card-builder-logo {
     height: 1.1rem;
@@ -311,7 +316,7 @@ const placed = lots
   .lot-card-cta {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--lot-card-accent);
+    color: var(--_card-accent);
   }
 
   /* ── Legend ───────────────────────────────────────────────────────────── */
@@ -326,7 +331,7 @@ const placed = lots
     line-height: 1;
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--lot-card-fg);
+    color: var(--_card-fg);
   }
   .lot-map-legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
   .lot-map-legend span {
@@ -336,9 +341,9 @@ const placed = lots
     border: 2px solid;
     opacity: 0.85;
   }
-  .lot-map-legend li[data-status='available'] span { background: var(--lot-available-fill); border-color: var(--lot-available-stroke); }
-  .lot-map-legend li[data-status='reserved'] span  { background: var(--lot-reserved-fill);  border-color: var(--lot-reserved-stroke); }
-  .lot-map-legend li[data-status='sold'] span      { background: var(--lot-sold-fill);      border-color: var(--lot-sold-stroke); }
+  .lot-map-legend li[data-status='available'] span { background: var(--_available-fill); border-color: var(--_available-stroke); }
+  .lot-map-legend li[data-status='reserved'] span  { background: var(--_reserved-fill);  border-color: var(--_reserved-stroke); }
+  .lot-map-legend li[data-status='sold'] span      { background: var(--_sold-fill);      border-color: var(--_sold-stroke); }
 
   @media (prefers-reduced-motion: reduce) {
     .lot-hotspot-fill, .lot-card { transition: none; }
