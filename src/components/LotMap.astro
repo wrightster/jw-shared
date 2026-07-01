@@ -1,0 +1,346 @@
+---
+// ─────────────────────────────────────────────────────────────────────────────
+// LotMap — background site-plan image + responsive lot-hotspot overlay
+//
+// The "simple map" tier (vs. a fully traced SVG plat): a rendered site-plan
+// image with clickable, status-colored lot hotspots layered on top, each with a
+// rich hover/focus card (status, acreage, builder). The image is the sizing
+// element; hotspots are percentage-positioned over it, so the overlay tracks the
+// image at any width with ZERO resize JS and no <svg> coordinate wrangling.
+//
+// Geometry (WHERE each lot sits) is a static per-site map authored against the
+// image via a calibration tool; lot data (WHAT each lot is) is passed in, usually
+// from the office API. A lot with no geometry entry is simply skipped.
+//
+// Theming: all colors are CSS custom properties with universal defaults. Override
+// them under `.lot-map` in a consumer's global.css to match that site's palette —
+// nothing here hard-codes a brand token, so it drops into any JW site.
+// ─────────────────────────────────────────────────────────────────────────────
+import type { LotHotspot, LotMapLot } from '../lotMap';
+
+interface Props {
+  image: string;
+  imageWidth: number;
+  imageHeight: number;
+  alt: string;
+  lots: LotMapLot[];
+  geometry: Record<string, LotHotspot>;
+  /** detail-page href prefix; final href = `${baseHref}${lot.id}` */
+  baseHref?: string;
+  /** noun for a single lot in labels/cards (e.g. "Homesite", "Lot") */
+  noun?: string;
+  /** show the status-color legend below the map (default true) */
+  legend?: boolean;
+}
+
+const {
+  image,
+  imageWidth,
+  imageHeight,
+  alt,
+  lots,
+  geometry,
+  baseHref = '/homesites/',
+  noun = 'Homesite',
+  legend = true,
+} = Astro.props;
+
+const statusLabel = (s: LotMapLot['status']) =>
+  s === 'available' ? 'Available' : s === 'reserved' ? 'Reserved' : 'Sold';
+
+const fmtAcres = (a: number | null | undefined) =>
+  a && a > 0 ? `${a.toLocaleString('en-US', { maximumFractionDigits: 3 })} ac` : '';
+
+const fmtPrice = (p: number | string | null | undefined) => {
+  if (p == null || p === '') return '';
+  const n = typeof p === 'number' ? p : parseFloat(p);
+  if (!Number.isFinite(n) || n <= 0) return typeof p === 'string' ? p : '';
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+};
+
+// Pair each lot with its hotspot and precompute layout (percent geometry + which
+// way the hover card should open, so it never runs off the top or side edges).
+const placed = lots
+  .map((lot) => {
+    const box = geometry[lot.number];
+    if (!box) return null;
+    const cx = box.x + box.w / 2;
+    return {
+      lot,
+      style:
+        `left:${(box.x / imageWidth) * 100}%;` +
+        `top:${(box.y / imageHeight) * 100}%;` +
+        `width:${(box.w / imageWidth) * 100}%;` +
+        `height:${(box.h / imageHeight) * 100}%;`,
+      // open card below when the lot is near the top, above otherwise
+      cardVer: box.y < imageHeight * 0.32 ? 'below' : 'above',
+      // align card to the nearer edge for lots close to the left/right border
+      cardHor: cx < imageWidth * 0.22 ? 'left' : cx > imageWidth * 0.78 ? 'right' : 'center',
+    };
+  })
+  .filter((p): p is NonNullable<typeof p> => p !== null);
+---
+
+<figure class="lot-map">
+  <img
+    src={image}
+    alt={alt}
+    class="lot-map-img"
+    width={imageWidth}
+    height={imageHeight}
+    loading="lazy"
+    decoding="async"
+  />
+
+  {placed.map(({ lot, style, cardVer, cardHor }) => {
+    const acres = fmtAcres(lot.acres);
+    const price = fmtPrice(lot.price);
+    const builderName = lot.builder?.short || lot.builder?.name || '';
+    return (
+      <a
+        href={`${baseHref}${lot.id}`}
+        class="lot-hotspot"
+        data-status={lot.status}
+        style={style}
+        aria-label={`${noun} ${lot.number} — ${statusLabel(lot.status)}${builderName ? `, ${builderName}` : ''}`}
+      >
+        <span class="lot-hotspot-fill"></span>
+        <span class="lot-card" data-ver={cardVer} data-hor={cardHor} role="tooltip">
+          <span class="lot-card-head">
+            <span class="lot-card-title">{noun} {lot.number}</span>
+            <span class="lot-card-status" data-status={lot.status}>{statusLabel(lot.status)}</span>
+          </span>
+          {(acres || price) && (
+            <span class="lot-card-facts">
+              {acres && <span class="lot-card-fact">{acres}</span>}
+              {price && <span class="lot-card-fact lot-card-price">{price}</span>}
+            </span>
+          )}
+          {builderName && (
+            <span class="lot-card-builder">
+              {lot.builder?.logo ? (
+                <img class="lot-card-builder-logo" src={lot.builder.logo} alt="" loading="lazy" />
+              ) : (
+                <span class="lot-card-builder-dot" style={lot.builder?.color ? `background:${lot.builder.color}` : undefined}></span>
+              )}
+              <span class="lot-card-builder-name">Built by {builderName}</span>
+            </span>
+          )}
+          <span class="lot-card-cta">View {noun.toLowerCase()} <span aria-hidden="true">→</span></span>
+        </span>
+      </a>
+    );
+  })}
+</figure>
+
+{legend && placed.length > 0 && (
+  <ul class="lot-map-legend" aria-hidden="true">
+    <li data-status="available"><span></span>Available</li>
+    <li data-status="reserved"><span></span>Reserved</li>
+    <li data-status="sold"><span></span>Sold</li>
+  </ul>
+)}
+
+<style>
+  .lot-map {
+    /* ── themeable knobs (override under .lot-map in a consumer global.css) ── */
+    --lot-radius: 5px;
+    --lot-fill-opacity: 0.26;
+    --lot-fill-opacity-hover: 0.58;
+    --lot-available-fill: #5a7d63;
+    --lot-available-stroke: #3f5a47;
+    --lot-reserved-fill: #c79a3f;
+    --lot-reserved-stroke: #9a7628;
+    --lot-sold-fill: #9e5563;
+    --lot-sold-stroke: #7c4654;
+    --lot-card-bg: #ffffff;
+    --lot-card-fg: #1f1a17;
+    --lot-card-muted: #6b625a;
+    --lot-card-border: rgba(0, 0, 0, 0.1);
+    --lot-card-accent: currentColor;
+    --lot-card-radius: 10px;
+    --lot-card-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.35);
+
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 64rem;
+    margin: 0 auto;
+    line-height: 0;
+    /* let hover cards spill past the image without being clipped */
+    overflow: visible;
+  }
+
+  .lot-map-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--lot-radius);
+  }
+
+  /* ── Hotspots ─────────────────────────────────────────────────────────── */
+  .lot-hotspot {
+    position: absolute;
+    display: block;
+    text-decoration: none;
+    outline: none;
+  }
+
+  .lot-hotspot-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--lot-radius);
+    border: 2px solid var(--hs-stroke, var(--lot-available-stroke));
+    background: var(--hs-fill, var(--lot-available-fill));
+    opacity: var(--lot-fill-opacity);
+    transition: opacity 0.15s ease, border-width 0.15s ease;
+  }
+
+  .lot-hotspot[data-status='available'] { --hs-fill: var(--lot-available-fill); --hs-stroke: var(--lot-available-stroke); }
+  .lot-hotspot[data-status='reserved']  { --hs-fill: var(--lot-reserved-fill);  --hs-stroke: var(--lot-reserved-stroke); }
+  .lot-hotspot[data-status='sold']      { --hs-fill: var(--lot-sold-fill);      --hs-stroke: var(--lot-sold-stroke); }
+
+  .lot-hotspot:hover .lot-hotspot-fill,
+  .lot-hotspot:focus-visible .lot-hotspot-fill {
+    opacity: var(--lot-fill-opacity-hover);
+  }
+  .lot-hotspot:focus-visible .lot-hotspot-fill {
+    box-shadow: 0 0 0 3px var(--lot-card-bg), 0 0 0 5px var(--hs-stroke);
+  }
+
+  /* ── Hover / focus card ───────────────────────────────────────────────── */
+  .lot-card {
+    position: absolute;
+    z-index: 20;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: max-content;
+    max-width: 15rem;
+    padding: 0.7rem 0.8rem;
+    background: var(--lot-card-bg);
+    color: var(--lot-card-fg);
+    border: 1px solid var(--lot-card-border);
+    border-radius: var(--lot-card-radius);
+    box-shadow: var(--lot-card-shadow);
+    line-height: 1.3;
+    text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.14s ease, transform 0.14s ease;
+  }
+  /* vertical placement */
+  .lot-card[data-ver='above'] { bottom: 100%; margin-bottom: 8px; }
+  .lot-card[data-ver='below'] { top: 100%; margin-top: 8px; }
+  /* horizontal placement for edge lots */
+  .lot-card[data-hor='left']  { left: 0; transform: translateX(0) translateY(4px); }
+  .lot-card[data-hor='right'] { left: auto; right: 0; transform: translateX(0) translateY(4px); }
+
+  .lot-hotspot:hover .lot-card,
+  .lot-hotspot:focus-visible .lot-card {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  .lot-hotspot:hover .lot-card[data-hor='left'],
+  .lot-hotspot:focus-visible .lot-card[data-hor='left'],
+  .lot-hotspot:hover .lot-card[data-hor='right'],
+  .lot-hotspot:focus-visible .lot-card[data-hor='right'] {
+    transform: translateX(0) translateY(0);
+  }
+
+  .lot-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
+  .lot-card-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  .lot-card-status {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.4rem;
+    border-radius: 999px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .lot-card-status[data-status='available'] { background: var(--lot-available-stroke); }
+  .lot-card-status[data-status='reserved']  { background: var(--lot-reserved-stroke); }
+  .lot-card-status[data-status='sold']      { background: var(--lot-sold-stroke); }
+
+  .lot-card-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.6rem;
+    font-size: 0.78rem;
+    color: var(--lot-card-muted);
+  }
+  .lot-card-price { color: var(--lot-card-fg); font-weight: 600; }
+
+  .lot-card-builder {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--lot-card-muted);
+  }
+  .lot-card-builder-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    flex: none;
+    background: var(--lot-card-accent);
+  }
+  .lot-card-builder-logo {
+    height: 1.1rem;
+    width: auto;
+    max-width: 4.5rem;
+    object-fit: contain;
+  }
+  .lot-card-builder-name { white-space: nowrap; }
+
+  .lot-card-cta {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--lot-card-accent);
+  }
+
+  /* ── Legend ───────────────────────────────────────────────────────────── */
+  .lot-map-legend {
+    list-style: none;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.25rem;
+    line-height: 1;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--lot-card-fg);
+  }
+  .lot-map-legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .lot-map-legend span {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 3px;
+    border: 2px solid;
+    opacity: 0.85;
+  }
+  .lot-map-legend li[data-status='available'] span { background: var(--lot-available-fill); border-color: var(--lot-available-stroke); }
+  .lot-map-legend li[data-status='reserved'] span  { background: var(--lot-reserved-fill);  border-color: var(--lot-reserved-stroke); }
+  .lot-map-legend li[data-status='sold'] span      { background: var(--lot-sold-fill);      border-color: var(--lot-sold-stroke); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lot-hotspot-fill, .lot-card { transition: none; }
+  }
+</style>
