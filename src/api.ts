@@ -273,6 +273,42 @@ export function formatBedsBaths(l: ApiListing): string {
   return parts.join(' · ');
 }
 
+// ---------- In-process response memo ----------
+//
+// SSR renders hit these endpoints on every request; the Node server process is
+// long-lived, so a tiny TTL memo keyed by URL turns repeated identical fetches
+// (hot listings, the team list, homepage) into in-memory reads and shields the
+// office from bursts. The office also caches server-side; this just avoids the
+// round trip. Short TTL keeps it fresh; entries expire lazily.
+
+const MEMO_TTL_MS = 60_000;
+const MEMO_MAX_ENTRIES = 500;
+
+interface MemoEntry {
+  at: number;
+  data: unknown;
+}
+
+const _memo = new Map<string, MemoEntry>();
+
+/**
+ * Fetch + parse JSON with a short in-process memo. Throws on a non-OK response
+ * (so callers' existing try/catch fall back to []/null and nothing is cached).
+ */
+async function cachedJson(url: string, ttlMs = MEMO_TTL_MS): Promise<any> {
+  const now = Date.now();
+  const hit = _memo.get(url);
+  if (hit && now - hit.at < ttlMs) return hit.data;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const json = await res.json();
+
+  if (_memo.size >= MEMO_MAX_ENTRIES) _memo.clear();
+  _memo.set(url, { at: now, data: json });
+  return json;
+}
+
 // ---------- Listing fetchers ----------
 
 export interface ListingsQuery {
@@ -303,9 +339,7 @@ export async function fetchListings(
   q: ListingsQuery = {},
 ): Promise<ApiListing[]> {
   try {
-    const res = await fetch(buildListingsUrl(site, q));
-    if (!res.ok) return [];
-    const json = await res.json();
+    const json = await cachedJson(buildListingsUrl(site, q));
     return (json.data ?? []) as ApiListing[];
   } catch {
     return [];
@@ -321,17 +355,17 @@ export async function fetchAllListings(
   q: ListingsQuery = {},
 ): Promise<ApiListing[]> {
   try {
-    const firstRes = await fetch(buildListingsUrl(site, q, 1));
-    if (!firstRes.ok) return [];
-    const firstJson = await firstRes.json();
+    const firstJson = await cachedJson(buildListingsUrl(site, q, 1));
     const all: ApiListing[] = [...(firstJson.data ?? [])];
     const lastPage: number = firstJson.meta?.last_page ?? 1;
     if (lastPage > 1) {
       const rest = await Promise.all(
         Array.from({ length: lastPage - 1 }, (_, i) => i + 2).map(async (page) => {
-          const res = await fetch(buildListingsUrl(site, q, page));
-          if (!res.ok) return [];
-          return ((await res.json()).data ?? []) as ApiListing[];
+          try {
+            return ((await cachedJson(buildListingsUrl(site, q, page))).data ?? []) as ApiListing[];
+          } catch {
+            return [];
+          }
         }),
       );
       all.push(...rest.flat());
@@ -344,10 +378,7 @@ export async function fetchAllListings(
 
 export async function fetchListing(slug: string): Promise<ApiListing | null> {
   try {
-    const res = await fetch(`${BASE_URL}/listings/${slug}`);
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const json = await res.json();
+    const json = await cachedJson(`${BASE_URL}/listings/${slug}`);
     return json.data as ApiListing;
   } catch {
     return null;
@@ -397,9 +428,7 @@ export interface ApiNeighborhood {
 
 export async function fetchNeighborhoods(): Promise<ApiNeighborhood[]> {
   try {
-    const res = await fetch(`${BASE_URL}/neighborhoods?per_page=100`);
-    if (!res.ok) return [];
-    const json = await res.json();
+    const json = await cachedJson(`${BASE_URL}/neighborhoods?per_page=100`);
     return (json.data ?? []) as ApiNeighborhood[];
   } catch {
     return [];
@@ -408,10 +437,7 @@ export async function fetchNeighborhoods(): Promise<ApiNeighborhood[]> {
 
 export async function fetchNeighborhood(slug: string): Promise<ApiNeighborhood | null> {
   try {
-    const res = await fetch(`${BASE_URL}/neighborhoods/${slug}`);
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const json = await res.json();
+    const json = await cachedJson(`${BASE_URL}/neighborhoods/${slug}`);
     return json.data as ApiNeighborhood;
   } catch {
     return null;
@@ -450,9 +476,7 @@ export interface ApiTeamMember {
 
 export async function fetchTeam(site: string): Promise<ApiTeamMember[]> {
   try {
-    const res = await fetch(`${BASE_URL}/team?site=${site}&per_page=100`);
-    if (!res.ok) return [];
-    const json = await res.json();
+    const json = await cachedJson(`${BASE_URL}/team?site=${site}&per_page=100`);
     return (json.data ?? []) as ApiTeamMember[];
   } catch {
     return [];
@@ -464,10 +488,7 @@ export async function fetchTeamMember(
   site: string,
 ): Promise<ApiTeamMember | null> {
   try {
-    const res = await fetch(`${BASE_URL}/team/${slug}?site=${site}`);
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const json = await res.json();
+    const json = await cachedJson(`${BASE_URL}/team/${slug}?site=${site}`);
     return json.data as ApiTeamMember;
   } catch {
     return null;
