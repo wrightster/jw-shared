@@ -1,0 +1,300 @@
+---
+// Listing photo gallery + lightbox, shared by JWRG and JWLC listing detail
+// pages. Renders the inline gallery (main image + thumbnail strip) and the
+// fixed lightbox overlay, with keyboard / wheel / swipe navigation. Styles live
+// in @jw/shared/styles/components.css (`.gallery-*` / `.lightbox-*`), already
+// imported by each site's global.css.
+//
+// Images fade in only after the new source has decoded, avoiding the swap
+// flicker. Pass the listing's photos; everything else is derived here.
+import type { ApiPhoto } from '../api';
+import { photoSrc, photoSrcSet, photoDimensions } from '../api';
+
+interface Props {
+  photos: ApiPhoto[];
+  /** Used for thumbnail alt text, e.g. "123 Main St photo 2". */
+  title: string;
+  /** Alt text for the main/hero image. */
+  alt: string;
+  /** Responsive `sizes` for the hero (defaults to the two-thirds detail column). */
+  sizes?: string;
+}
+
+const { photos, title, alt, sizes = '(min-width: 1024px) 66vw, 100vw' } = Astro.props;
+
+const imageList = photos.map((p) => photoSrc(p, 800));
+const fullImageList = photos.map((p) => photoSrc(p, 1600));
+const heroSrcsetList = photos.map((p) => photoSrcSet(p, 'jpg'));
+const heroSizes = sizes;
+const heroDims = photoDimensions(photos[0], 1200);
+const totalImages = photos.length;
+---
+
+<div class="listing-gallery-inset">
+  <!-- Main Image -->
+  <div
+    class="gallery-main-wrap"
+    id="main-image-wrap"
+    role={totalImages > 1 ? 'button' : undefined}
+    tabindex={totalImages > 1 ? 0 : undefined}
+    aria-label={totalImages > 1 ? 'Open photo gallery' : undefined}
+  >
+    {photos.length > 0 ? (
+      <img
+        src={imageList[0]}
+        srcset={heroSrcsetList[0] ?? undefined}
+        sizes={heroSrcsetList[0] ? heroSizes : undefined}
+        width={heroDims?.width}
+        height={heroDims?.height}
+        alt={alt}
+        class="gallery-main-img"
+        id="main-image"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+    ) : (
+      <div class="gallery-main-img gallery-main-img--placeholder" id="main-image"></div>
+    )}
+    <div class="gallery-gradient" aria-hidden="true"></div>
+    <div class="gallery-counter" aria-hidden="true">
+      <svg class="gallery-counter-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 003.75 21z" />
+      </svg>
+      <span id="image-counter">1 / {totalImages}</span>
+    </div>
+    {totalImages > 1 && (
+      <div class="gallery-hint" aria-hidden="true">Click or press Enter to view gallery</div>
+    )}
+  </div>
+
+  <!-- Thumbnail Strip -->
+  {totalImages > 1 && (
+    <div class="gallery-thumbs">
+      <div class="gallery-thumb-row" id="thumb-strip">
+        {imageList.map((img, i) => (
+          <button class:list={['thumb-btn', i === 0 && 'active']} data-index={i} data-src={img}>
+            <img src={photoSrc(photos[i], 400)} alt={`${title} photo ${i + 1}`} class="thumb-img" loading="lazy" />
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Image gallery">
+  <img id="lb-bg" src="" alt="" aria-hidden="true" class="lightbox-bg" />
+  <div class="lightbox-overlay"></div>
+  <button id="lb-close" class="lightbox-close" aria-label="Close gallery">
+    <svg class="lightbox-close-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  </button>
+
+  <button id="lb-prev" class="lightbox-prev" aria-label="Previous image">
+    <svg class="lightbox-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+  </button>
+
+  <button id="lb-next" class="lightbox-next" aria-label="Next image">
+    <svg class="lightbox-nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  </button>
+
+  <div class="lightbox-body">
+    <img id="lb-image" src="" alt="" class="lightbox-img" />
+  </div>
+
+  <div class="lightbox-counter" id="lb-counter"></div>
+</div>
+
+<script define:vars={{ imageList, fullImageList, totalImages, heroSrcsetList, heroSizes }}>
+  let currentIndex = 0;
+
+  const mainImage = document.getElementById('main-image');
+  const mainWrap = document.getElementById('main-image-wrap');
+  const counter = document.getElementById('image-counter');
+  const thumbs = document.querySelectorAll('.thumb-btn');
+
+  // Fade an <img> back to targetOpacity only once its (new) source has decoded
+  // — otherwise the element fades in while still loading and you get a
+  // blank/old-frame flicker before the real image pops in.
+  function fadeInWhenReady(img, targetOpacity) {
+    const show = () => { img.style.opacity = String(targetOpacity); };
+    if (typeof img.decode === 'function') {
+      img.decode().then(show, show);
+    } else if (img.complete) {
+      show();
+    } else {
+      img.addEventListener('load', show, { once: true });
+      img.addEventListener('error', show, { once: true });
+    }
+  }
+
+  function setMainImage(index) {
+    currentIndex = index;
+    if (mainImage) {
+      mainImage.style.opacity = '0';
+      setTimeout(() => {
+        const srcset = heroSrcsetList[index];
+        if (srcset) {
+          mainImage.srcset = srcset;
+          mainImage.sizes = heroSizes;
+        } else {
+          mainImage.removeAttribute('srcset');
+          mainImage.removeAttribute('sizes');
+        }
+        mainImage.src = imageList[index];
+        fadeInWhenReady(mainImage, 1);
+      }, 150);
+    }
+    if (counter) counter.textContent = `${index + 1} / ${totalImages}`;
+    thumbs.forEach((t, i) => {
+      t.classList.toggle('active', i === index);
+    });
+  }
+
+  thumbs.forEach((btn) => {
+    btn.addEventListener('click', () => setMainImage(parseInt(btn.dataset.index)));
+  });
+
+  const lightbox = document.getElementById('lightbox');
+  const lbImage = document.getElementById('lb-image');
+  const lbBg = document.getElementById('lb-bg');
+  const lbCounter = document.getElementById('lb-counter');
+  const lbClose = document.getElementById('lb-close');
+  const lbPrev = document.getElementById('lb-prev');
+  const lbNext = document.getElementById('lb-next');
+
+  let lightboxTrigger = null;
+
+  function applyImageCrop() {
+    if (!lbImage || !lbImage.naturalWidth) return;
+    var ratio = lbImage.naturalWidth / lbImage.naturalHeight;
+    lbImage.classList.remove('crop-landscape', 'crop-portrait');
+    if (ratio > 16 / 9) {
+      lbImage.classList.add('crop-landscape');
+    } else if (ratio < 9 / 16) {
+      lbImage.classList.add('crop-portrait');
+    }
+  }
+
+  if (lbImage) lbImage.addEventListener('load', applyImageCrop);
+
+  function openLightbox(index, trigger) {
+    currentIndex = index;
+    lightboxTrigger = trigger ?? null;
+    if (lbBg) { lbBg.src = fullImageList[currentIndex]; lbBg.style.opacity = '0.50'; }
+    if (lbImage) { lbImage.src = fullImageList[currentIndex]; lbImage.alt = `Photo ${currentIndex + 1} of ${totalImages}`; lbImage.style.opacity = '1'; }
+    if (lbCounter) lbCounter.textContent = `${currentIndex + 1} / ${totalImages}`;
+    setMainImage(currentIndex);
+    lightbox?.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    lbClose?.focus();
+  }
+
+  function closeLightbox() {
+    lightbox?.classList.remove('is-open');
+    lightbox?.addEventListener('transitionend', () => {
+      document.body.style.overflow = '';
+      lightboxTrigger?.focus();
+      lightboxTrigger = null;
+    }, { once: true });
+  }
+
+  function updateLightbox() {
+    const src = fullImageList[currentIndex];
+    if (lbImage) {
+      lbImage.style.opacity = '0';
+      setTimeout(() => {
+        lbImage.src = src;
+        lbImage.alt = `Photo ${currentIndex + 1}`;
+        fadeInWhenReady(lbImage, 1);
+      }, 150);
+    }
+    if (lbBg) {
+      lbBg.style.opacity = '0';
+      setTimeout(() => {
+        lbBg.src = src;
+        fadeInWhenReady(lbBg, 0.5);
+      }, 150);
+    }
+    if (lbCounter) lbCounter.textContent = `${currentIndex + 1} / ${totalImages}`;
+    setMainImage(currentIndex);
+  }
+
+  function nextImage() {
+    currentIndex = (currentIndex + 1) % totalImages;
+    updateLightbox();
+  }
+
+  function prevImage() {
+    currentIndex = (currentIndex - 1 + totalImages) % totalImages;
+    updateLightbox();
+  }
+
+  mainWrap?.addEventListener('click', () => openLightbox(currentIndex, mainWrap));
+  mainWrap?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openLightbox(currentIndex, mainWrap);
+    }
+  });
+  lbClose?.addEventListener('click', closeLightbox);
+  lbPrev?.addEventListener('click', prevImage);
+  lbNext?.addEventListener('click', nextImage);
+
+  lightbox?.addEventListener('click', (e) => {
+    if (!e.target.closest('button, .lightbox-body, .lightbox-counter')) {
+      closeLightbox();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!lightbox?.classList.contains('is-open')) return;
+    if (e.key === 'Escape') { closeLightbox(); return; }
+    if (e.key === 'ArrowRight') { nextImage(); return; }
+    if (e.key === 'ArrowLeft') { prevImage(); return; }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const focusable = [lbClose, lbPrev, lbNext].filter(Boolean);
+      const idx = focusable.indexOf(document.activeElement);
+      const next = e.shiftKey
+        ? (idx - 1 + focusable.length) % focusable.length
+        : (idx + 1) % focusable.length;
+      focusable[next].focus();
+    }
+  });
+
+  var wheelAccumX = 0;
+  var wheelCooldown = false;
+  lightbox?.addEventListener('wheel', function (e) {
+    if (!lightbox.classList.contains('is-open')) return;
+    e.preventDefault();
+    if (wheelCooldown) return;
+    wheelAccumX += e.deltaX;
+    if (Math.abs(wheelAccumX) > 60) {
+      if (wheelAccumX > 0) nextImage(); else prevImage();
+      wheelAccumX = 0;
+      wheelCooldown = true;
+      setTimeout(function () { wheelCooldown = false; wheelAccumX = 0; }, 500);
+    }
+  }, { passive: false });
+
+  var swipeStartX = 0;
+  var swipeStartY = 0;
+  lightbox?.addEventListener('touchstart', function (e) {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+  lightbox?.addEventListener('touchend', function (e) {
+    var dx = e.changedTouches[0].clientX - swipeStartX;
+    var dy = e.changedTouches[0].clientY - swipeStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) nextImage(); else prevImage();
+    }
+  }, { passive: true });
+</script>

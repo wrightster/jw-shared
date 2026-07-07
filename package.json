@@ -1,6 +1,6 @@
 {
   "name": "@jw/shared",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,6 +12,7 @@
     "./components/ListingRow.astro": "./src/components/ListingRow.astro",
     "./components/VideoSection.astro": "./src/components/VideoSection.astro",
     "./components/LotMap.astro": "./src/components/LotMap.astro",
+    "./components/ListingGallery.astro": "./src/components/ListingGallery.astro",
     "./styles/tokens.css": {
       "style": "./src/styles/tokens.css",
       "default": "./src/styles/tokens.css"
