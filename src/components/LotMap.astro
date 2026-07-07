@@ -82,6 +82,7 @@ const placed = lots
 ---
 
 <figure class="lot-map">
+  <div class="lot-map-stage">
   <img
     src={image}
     alt={alt}
@@ -131,15 +132,16 @@ const placed = lots
       </a>
     );
   })}
-</figure>
+  </div>
 
-{legend && placed.length > 0 && (
-  <ul class="lot-map-legend" aria-hidden="true">
-    <li data-status="available"><span></span>Available</li>
-    <li data-status="reserved"><span></span>Reserved</li>
-    <li data-status="sold"><span></span>Sold</li>
-  </ul>
-)}
+  {legend && placed.length > 0 && (
+    <ul class="lot-map-legend" aria-hidden="true">
+      <li data-status="available"><span></span>Available</li>
+      <li data-status="reserved"><span></span>Reserved</li>
+      <li data-status="sold"><span></span>Sold</li>
+    </ul>
+  )}
+</figure>
 
 <style>
   .lot-map {
@@ -166,11 +168,19 @@ const placed = lots
     --_card-radius: var(--lot-card-radius, 10px);
     --_card-shadow: var(--lot-card-shadow, 0 10px 30px -8px rgba(0, 0, 0, 0.35));
 
-    position: relative;
     display: block;
     width: 100%;
     max-width: 64rem;
     margin: 0 auto;
+  }
+
+  /* The image + hotspots live in their own positioned box so the hotspots'
+     percentage geometry resolves against the image height only — the legend
+     sits in .lot-map (so the theme vars cascade into it) but outside the stage
+     (so it never perturbs hotspot positioning). */
+  .lot-map-stage {
+    position: relative;
+    display: block;
     line-height: 0;
     /* let hover cards spill past the image without being clipped */
     overflow: visible;
