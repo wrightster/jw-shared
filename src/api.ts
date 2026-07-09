@@ -426,9 +426,15 @@ export interface ApiNeighborhood {
   documents?: ApiDocument[];
 }
 
-export async function fetchNeighborhoods(): Promise<ApiNeighborhood[]> {
+export async function fetchNeighborhoods(site?: string): Promise<ApiNeighborhood[]> {
   try {
-    const json = await cachedJson(`${BASE_URL}/neighborhoods?per_page=100`);
+    // Pass the site slug so `listings_count` is scoped to listings that are
+    // actually live on this site (public statuses + published here) — matches
+    // what a visitor finds inside the neighborhood. Omit it and the count
+    // covers public listings across every site.
+    const params = new URLSearchParams({ per_page: '100' });
+    if (site) params.set('site', site);
+    const json = await cachedJson(`${BASE_URL}/neighborhoods?${params.toString()}`);
     return (json.data ?? []) as ApiNeighborhood[];
   } catch {
     return [];
