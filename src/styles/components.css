@@ -931,15 +931,22 @@
      same height on every row. Not needed in the mobile row layout. */
   .listing-row-acreage { @apply font-display font-bold text-base text-earth-900 leading-snug sm:min-h-[1.375rem]; }
 
-  /* .listing-row-link is absolutely positioned at the row's bottom-right, so it
-     takes up no space here — pb reserves its height (bottom-2.5 + a 1rem line box). */
+  /* At sm+, .listing-row-link is absolutely positioned at the row's bottom-right
+     and takes up no space here — pb reserves its height (bottom-2.5 + a 1rem
+     line box). Below sm the link flows as the last flex item instead, so no
+     horizontal reservation is needed: it wraps to its own line when the
+     headline and price already fill the row, and shares their line when they
+     don't. Reserving a fixed pr for it was too narrow for the link's real
+     width, which is what made the price overlap it. */
   .listing-row-right {
     @apply shrink-0 flex flex-col items-end justify-center gap-1 pt-[18px] pb-8 pr-4 pl-4 self-stretch
-           max-sm:flex-row max-sm:items-center max-sm:justify-start max-sm:gap-3 max-sm:pt-0 max-sm:pb-[10px] max-sm:pl-0 max-sm:pr-20 max-sm:self-auto;
+           max-sm:flex-row max-sm:flex-wrap max-sm:items-center max-sm:justify-start
+           max-sm:gap-x-3 max-sm:gap-y-1 max-sm:pt-0 max-sm:pb-[10px] max-sm:pl-0 max-sm:self-auto;
   }
   .listing-row-price { @apply font-display font-bold text-lg text-red-600 leading-none; }
   .listing-row-link  {
-    @apply absolute bottom-2.5 right-4 flex items-center gap-1 text-xs text-earth-400 transition-colors duration-200;
+    @apply absolute bottom-2.5 right-4 flex items-center gap-1 text-xs text-earth-400 transition-colors duration-200
+           max-sm:static max-sm:ml-auto;
   }
   .listing-row:hover .listing-row-link { color: var(--color-red-600); }
   .listing-row-arrow {
