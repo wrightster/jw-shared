@@ -1024,7 +1024,9 @@
   left: 50%; top: 50%;
   transform: translateX(-50%) translateY(-50%);
   pointer-events: none; user-select: none;
-  will-change: transform;
+  /* No `will-change: transform` — it pinned 2-3 always-alive GPU layers (one per
+     topo image) even at rest, costing memory on the low-end devices that matter
+     most. The parallax still composites on demand while scrolling. */
 }
 .topo-bg--light  { opacity: 0.2; }
 .topo-bg--faint  { opacity: 0.035; }

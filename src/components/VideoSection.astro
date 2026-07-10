@@ -40,6 +40,7 @@ const items = (videos ?? []).filter((v) => v.is_public && v.playback_url);
                 class="jw-video-facade group absolute inset-0 h-full w-full cursor-pointer border-0 p-0"
                 data-kind={v.source}
                 data-playback={v.playback_url}
+                data-title={v.title ?? 'Property video'}
                 aria-label={`Play ${v.title ?? 'video'}`}
               >
                 {poster ? (
@@ -88,6 +89,7 @@ const items = (videos ?? []).filter((v) => v.is_public && v.playback_url);
             var join = src.indexOf('?') === -1 ? '?' : '&';
             el = document.createElement('iframe');
             el.src = src + join + 'autoplay=1';
+            el.title = btn.getAttribute('data-title') || 'Property video';
             el.className = 'absolute inset-0 h-full w-full';
             el.setAttribute('frameborder', '0');
             el.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');

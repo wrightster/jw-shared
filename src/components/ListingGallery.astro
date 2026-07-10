@@ -162,6 +162,9 @@ const totalImages = photos.length;
   });
 
   const lightbox = document.getElementById('lightbox');
+  // Closed lightbox is only opacity:0/pointer-events:none — mark it inert so its
+  // Close/Prev/Next buttons leave the tab order until it's opened.
+  if (lightbox) lightbox.inert = true;
   const lbImage = document.getElementById('lb-image');
   const lbBg = document.getElementById('lb-bg');
   const lbCounter = document.getElementById('lb-counter');
@@ -191,6 +194,7 @@ const totalImages = photos.length;
     if (lbImage) { lbImage.src = fullImageList[currentIndex]; lbImage.alt = `Photo ${currentIndex + 1} of ${totalImages}`; lbImage.style.opacity = '1'; }
     if (lbCounter) lbCounter.textContent = `${currentIndex + 1} / ${totalImages}`;
     setMainImage(currentIndex);
+    if (lightbox) lightbox.inert = false;
     lightbox?.classList.add('is-open');
     document.body.style.overflow = 'hidden';
     lbClose?.focus();
@@ -198,6 +202,7 @@ const totalImages = photos.length;
 
   function closeLightbox() {
     lightbox?.classList.remove('is-open');
+    if (lightbox) lightbox.inert = true;
     lightbox?.addEventListener('transitionend', () => {
       document.body.style.overflow = '';
       lightboxTrigger?.focus();

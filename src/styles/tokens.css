@@ -31,7 +31,7 @@
   --color-gold-300: #ffcf7d;  /* ★ Light Accent / Muted Gold */
   --color-gold-400: #f5b35a;
   --color-gold-500: #e89537;
-  --color-gold-600: #c07622;
+  --color-gold-600: #a5641b;  /* darkened for WCAG AA text (was #c07622, 3.59:1 on white) */
   --color-gold-700: #935919;
   --color-gold-800: #6a3f10;
   --color-gold-900: #45280a;
@@ -44,8 +44,8 @@
   --color-earth-200: #e8d9bb;
   --color-earth-300: #d4bc96;
   --color-earth-400: #bb9d72;
-  --color-earth-500: #a48a63;
-  --color-earth-600: #8d7350;
+  --color-earth-500: #877050;  /* darkened for WCAG AA text (was #a48a63, 3.28:1 on white) */
+  --color-earth-600: #7c6547;  /* darkened for WCAG AA text (was #8d7350, 4.47:1 on white) */
   --color-earth-700: #745d42;
   --color-earth-800: #5e4c38;
   --color-earth-900: #3a3023;  /* ★ Dark Neutral / Rich Soil — main dark text */
