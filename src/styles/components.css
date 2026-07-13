@@ -656,7 +656,7 @@
   .gallery-main-wrap {
     @apply relative aspect-[16/9] overflow-hidden cursor-pointer rounded-sm w-full md:w-4/5 mx-auto;
   }
-  .gallery-main-img  { @apply w-full h-full object-cover transition-opacity duration-500; }
+  .gallery-main-img  { @apply w-full h-full object-cover transition-opacity duration-150; }
   .gallery-gradient  {
     @apply absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-earth-900/60 to-transparent pointer-events-none;
   }
@@ -821,7 +821,7 @@
   }
   .lightbox-nav-icon { @apply w-12 h-12 pointer-events-none; }
   .lightbox-body     { @apply relative z-10 max-w-6xl max-h-[85vh] mx-auto px-32; }
-  .lightbox-img      { @apply max-w-full max-h-[85vh] object-contain mx-auto transition-opacity duration-300; }
+  .lightbox-img      { @apply max-w-full max-h-[85vh] object-contain mx-auto transition-opacity duration-150; }
   .lightbox-img.crop-landscape {
     aspect-ratio: 16/9;
     object-fit: cover;

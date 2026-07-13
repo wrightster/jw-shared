@@ -5,8 +5,9 @@
 // in @jw/shared/styles/components.css (`.gallery-*` / `.lightbox-*`), already
 // imported by each site's global.css.
 //
-// Images fade in only after the new source has decoded, avoiding the swap
-// flicker. Pass the listing's photos; everything else is derived here.
+// Image swaps are cross-faded around the source change — fade out fully, swap,
+// then fade in on decode — so cycling never flashes a blank or half-faded frame.
+// Pass the listing's photos; everything else is derived here.
 import type { ApiPhoto } from '../api';
 import { photoSrc, photoSrcSet, photoDimensions } from '../api';
 
@@ -119,11 +120,31 @@ const totalImages = photos.length;
   const counter = document.getElementById('image-counter');
   const thumbs = document.querySelectorAll('.thumb-btn');
 
-  // Fade an <img> back to targetOpacity only once its (new) source has decoded
-  // — otherwise the element fades in while still loading and you get a
-  // blank/old-frame flicker before the real image pops in.
-  function fadeInWhenReady(img, targetOpacity) {
-    const show = () => { img.style.opacity = String(targetOpacity); };
+  // Swapping an <img> source blanks the element until the new source decodes, so
+  // a clean cross-fade has to bracket the swap on both sides: finish fading out
+  // before assigning src (or the old photo pops out while still visible), and
+  // wait for decode before fading back in (or you fade in a blank frame). The
+  // fade-out wait is read from the element's own transition so it can never drift
+  // out of sync with the CSS. Each element carries a sequence number so a slow
+  // decode from an earlier swap can't paint itself over a newer one when the user
+  // cycles quickly.
+  const swapSeq = new WeakMap();
+
+  function fadeMs(img) {
+    const d = getComputedStyle(img).transitionDuration.split(',')[0];
+    return (parseFloat(d) || 0) * 1000;
+  }
+
+  function bumpSeq(img) {
+    const seq = (swapSeq.get(img) ?? 0) + 1;
+    swapSeq.set(img, seq);
+    return seq;
+  }
+
+  function showWhenDecoded(img, targetOpacity, seq) {
+    const show = () => {
+      if (swapSeq.get(img) === seq) img.style.opacity = String(targetOpacity);
+    };
     if (typeof img.decode === 'function') {
       img.decode().then(show, show);
     } else if (img.complete) {
@@ -134,11 +155,29 @@ const totalImages = photos.length;
     }
   }
 
+  // Cross-fade a visible <img> onto a new source. `apply` assigns src/srcset.
+  function crossFade(img, targetOpacity, apply) {
+    const seq = bumpSeq(img);
+    img.style.opacity = '0';
+    setTimeout(() => {
+      if (swapSeq.get(img) !== seq) return; // superseded mid-fade
+      apply();
+      showWhenDecoded(img, targetOpacity, seq);
+    }, fadeMs(img));
+  }
+
+  // Point a hidden <img> at a source and reveal it once it can actually paint.
+  function showSource(img, src, targetOpacity) {
+    const seq = bumpSeq(img);
+    img.style.opacity = '0';
+    img.src = src;
+    showWhenDecoded(img, targetOpacity, seq);
+  }
+
   function setMainImage(index) {
     currentIndex = index;
     if (mainImage) {
-      mainImage.style.opacity = '0';
-      setTimeout(() => {
+      crossFade(mainImage, 1, () => {
         const srcset = heroSrcsetList[index];
         if (srcset) {
           mainImage.srcset = srcset;
@@ -148,8 +187,7 @@ const totalImages = photos.length;
           mainImage.removeAttribute('sizes');
         }
         mainImage.src = imageList[index];
-        fadeInWhenReady(mainImage, 1);
-      }, 150);
+      });
     }
     if (counter) counter.textContent = `${index + 1} / ${totalImages}`;
     thumbs.forEach((t, i) => {
@@ -190,8 +228,13 @@ const totalImages = photos.length;
   function openLightbox(index, trigger) {
     currentIndex = index;
     lightboxTrigger = trigger ?? null;
-    if (lbBg) { lbBg.src = fullImageList[currentIndex]; lbBg.style.opacity = '0.50'; }
-    if (lbImage) { lbImage.src = fullImageList[currentIndex]; lbImage.alt = `Photo ${currentIndex + 1} of ${totalImages}`; lbImage.style.opacity = '1'; }
+    // The lightbox swaps in full-size sources, so reveal them on decode rather
+    // than forcing opacity while the browser still has nothing to paint.
+    if (lbBg) showSource(lbBg, fullImageList[currentIndex], 0.5);
+    if (lbImage) {
+      lbImage.alt = `Photo ${currentIndex + 1} of ${totalImages}`;
+      showSource(lbImage, fullImageList[currentIndex], 1);
+    }
     if (lbCounter) lbCounter.textContent = `${currentIndex + 1} / ${totalImages}`;
     setMainImage(currentIndex);
     if (lightbox) lightbox.inert = false;
@@ -213,19 +256,13 @@ const totalImages = photos.length;
   function updateLightbox() {
     const src = fullImageList[currentIndex];
     if (lbImage) {
-      lbImage.style.opacity = '0';
-      setTimeout(() => {
+      crossFade(lbImage, 1, () => {
         lbImage.src = src;
-        lbImage.alt = `Photo ${currentIndex + 1}`;
-        fadeInWhenReady(lbImage, 1);
-      }, 150);
+        lbImage.alt = `Photo ${currentIndex + 1} of ${totalImages}`;
+      });
     }
     if (lbBg) {
-      lbBg.style.opacity = '0';
-      setTimeout(() => {
-        lbBg.src = src;
-        fadeInWhenReady(lbBg, 0.5);
-      }, 150);
+      crossFade(lbBg, 0.5, () => { lbBg.src = src; });
     }
     if (lbCounter) lbCounter.textContent = `${currentIndex + 1} / ${totalImages}`;
     setMainImage(currentIndex);
