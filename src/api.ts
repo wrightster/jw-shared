@@ -118,6 +118,10 @@ export interface ApiDocument {
    *  trailing default bucket. Use groupDocuments() below. */
   folder: { id: string; name: string; sort_order: number } | null;
   url: string | null;
+  /** Real mime of the stored file (null for external/link-only docs). Viewers
+   *  branch on it: PDFs/images can render inline via `?inline=1` on the
+   *  download URL; anything else should fall back to download. */
+  mime: string | null;
   expires_at: string | null;
 }
 
