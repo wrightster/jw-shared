@@ -113,8 +113,50 @@ export interface ApiDocument {
   /** Entity the doc is attached to. Listing detail merges in neighborhood docs
    *  flagged share_with_listings — those arrive with source 'neighborhood'. */
   source: 'listing' | 'neighborhood' | 'contact' | 'transaction' | 'campaign' | null;
+  /** Office-managed display group (a DocumentFolder). Group docs by folder.id,
+   *  order groups by folder.sort_order (then name); folderless docs go in a
+   *  trailing default bucket. Use groupDocuments() below. */
+  folder: { id: string; name: string; sort_order: number } | null;
   url: string | null;
   expires_at: string | null;
+}
+
+export interface DocumentGroup {
+  /** Folder id, or 'ungrouped' for the trailing default bucket. */
+  id: string;
+  name: string;
+  documents: ApiDocument[];
+}
+
+/**
+ * Group documents by their office-managed folder (display group). Groups are
+ * ordered by folder sort_order (then name); documents keep their given order
+ * (the API already sorts by document sort_order); folderless docs land in a
+ * trailing bucket named `fallbackName`. The canonical grouping recipe — both
+ * sites should render document lists through this.
+ */
+export function groupDocuments(docs: ApiDocument[], fallbackName = 'Documents'): DocumentGroup[] {
+  const grouped = new Map<string, DocumentGroup & { sort: number }>();
+  const loose: ApiDocument[] = [];
+  for (const d of docs) {
+    if (!d.folder) {
+      loose.push(d);
+      continue;
+    }
+    const g = grouped.get(d.folder.id) ?? {
+      id: d.folder.id,
+      name: d.folder.name,
+      sort: d.folder.sort_order,
+      documents: [],
+    };
+    g.documents.push(d);
+    grouped.set(d.folder.id, g);
+  }
+  const groups = [...grouped.values()]
+    .sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name))
+    .map(({ sort: _sort, ...g }) => g);
+  if (loose.length > 0) groups.push({ id: 'ungrouped', name: fallbackName, documents: loose });
+  return groups;
 }
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
