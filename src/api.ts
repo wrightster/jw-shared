@@ -419,6 +419,18 @@ export interface ApiNeighborhood {
   deed_restrictions_summary: string | null;
   website_url: string | null;
 
+  // Office-managed brand mark (typically an SVG logo) shown on the grid and
+  // detail hero in place of a photo. Attached to the neighborhood record, so
+  // slug renames can't orphan it — replaces the old slug-keyed local SVG map.
+  // `aspect` = width/height derived from the artwork; `scale` is an optional
+  // optical-balance factor (treat null as 1).
+  featured_image: {
+    url: string;
+    mime: string | null;
+    aspect: number | null;
+    scale: number | null;
+  } | null;
+
   primary_photo: ApiPhoto | null;
   photos?: ApiPhoto[];
   photo_count?: number;
