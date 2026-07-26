@@ -319,15 +319,28 @@ export function formatBedsBaths(l: ApiListing): string {
   return parts.join(' · ');
 }
 
-// ---------- In-process response memo ----------
+// ---------- In-process response memo (stale-while-revalidate) ----------
 //
 // SSR renders hit these endpoints on every request; the Node server process is
-// long-lived, so a tiny TTL memo keyed by URL turns repeated identical fetches
-// (hot listings, the team list, homepage) into in-memory reads and shields the
-// office from bursts. The office also caches server-side; this just avoids the
-// round trip. Short TTL keeps it fresh; entries expire lazily.
+// long-lived, so a URL-keyed memo turns repeated identical fetches (hot
+// listings, the team list, homepage) into in-memory reads and shields the
+// office from bursts. The office also caches server-side; this avoids the round
+// trip.
+//
+// Stale-while-revalidate: within FRESH_MS a hit is served as-is. Past that, the
+// cached copy is STILL returned immediately and a background refresh is kicked
+// off (deduped per URL) — so once a URL has been fetched, a request never blocks
+// on the office round-trip again. Only a genuinely cold URL (never fetched)
+// awaits the network, and only that path throws (so callers' try/catch still
+// fall back to []/null). A failed background refresh keeps the last good value
+// instead of evicting it, so a transient office blip never surfaces as an empty
+// state.
+//
+// Tradeoff: served data can be up to one refresh-cycle stale — fine for the
+// marketing data these fetchers serve (listings/team/neighborhoods). An office
+// edit still propagates within ~FRESH_MS plus the background fetch.
 
-const MEMO_TTL_MS = 60_000;
+const FRESH_MS = 60_000;
 const MEMO_MAX_ENTRIES = 500;
 
 interface MemoEntry {
@@ -336,23 +349,48 @@ interface MemoEntry {
 }
 
 const _memo = new Map<string, MemoEntry>();
+const _inflight = new Map<string, Promise<void>>();
 
-/**
- * Fetch + parse JSON with a short in-process memo. Throws on a non-OK response
- * (so callers' existing try/catch fall back to []/null and nothing is cached).
- */
-async function cachedJson(url: string, ttlMs = MEMO_TTL_MS): Promise<any> {
-  const now = Date.now();
-  const hit = _memo.get(url);
-  if (hit && now - hit.at < ttlMs) return hit.data;
-
+/** Fetch + parse JSON and store it in the memo. Shared by the cold-read and the
+ *  background-refresh paths. Throws on a non-OK response. */
+async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   const json = await res.json();
-
-  if (_memo.size >= MEMO_MAX_ENTRIES) _memo.clear();
-  _memo.set(url, { at: now, data: json });
+  // Blunt cap: only the cold path can grow the map, so only evict when adding a
+  // new key. A refresh (key already present) just overwrites in place.
+  if (!_memo.has(url) && _memo.size >= MEMO_MAX_ENTRIES) _memo.clear();
+  _memo.set(url, { at: Date.now(), data: json });
   return json;
+}
+
+/** Kick off a background refresh, deduped so a burst of stale hits spawns at
+ *  most one in-flight fetch per URL. Errors are swallowed — the stale entry
+ *  stays served until a refresh succeeds. */
+function revalidate(url: string): void {
+  if (_inflight.has(url)) return;
+  const p = fetchJson(url)
+    .then(() => undefined)
+    .catch(() => undefined)
+    .finally(() => {
+      _inflight.delete(url);
+    });
+  _inflight.set(url, p);
+}
+
+/**
+ * Fetch + parse JSON with a stale-while-revalidate in-process memo. Returns the
+ * cached copy instantly when present (refreshing in the background once it's
+ * older than `freshMs`); only a cold URL awaits the network, and only that path
+ * throws (so callers' existing try/catch fall back to []/null).
+ */
+async function cachedJson(url: string, freshMs = FRESH_MS): Promise<any> {
+  const hit = _memo.get(url);
+  if (hit) {
+    if (Date.now() - hit.at >= freshMs) revalidate(url); // stale → refresh in background
+    return hit.data; // serve instantly whether fresh or stale
+  }
+  return fetchJson(url); // cold → block once (may throw; caller falls back)
 }
 
 // ---------- Listing fetchers ----------
