@@ -34,6 +34,11 @@ const {
 } = Astro.props;
 
 const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+
+// Facebook App ID — shared across the JWRG/JWLC Meta business. Enables Facebook
+// share/domain Insights and clears the Sharing Debugger's "missing fb:app_id"
+// warning. Same value for every site, so it lives here rather than per-consumer.
+const FB_APP_ID = '1065218916197027';
 ---
 
 <title>{title}</title>
@@ -50,6 +55,7 @@ const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 <meta property="og:image:width" content={String(imageWidth)} />
 <meta property="og:image:height" content={String(imageHeight)} />
 {imageAlt && <meta property="og:image:alt" content={imageAlt} />}
+<meta property="fb:app_id" content={FB_APP_ID} />
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image" />
