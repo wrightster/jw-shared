@@ -519,6 +519,10 @@ export interface ApiNeighborhood {
   photos?: ApiPhoto[];
   photo_count?: number;
   listings_count?: number;
+  // Count of lots with status "available" — present on the INDEX payload only
+  // (absent on detail, which returns full lots[]). Lets the index show "N lots"
+  // without a per-card /lots fan-out. Optional so pre-§13 office builds still type.
+  available_lots_count?: number;
   documents?: ApiDocument[];
 }
 
