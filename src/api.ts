@@ -352,10 +352,11 @@ const _memo = new Map<string, MemoEntry>();
 const _inflight = new Map<string, Promise<void>>();
 
 /** Fetch + parse JSON and store it in the memo. Shared by the cold-read and the
- *  background-refresh paths. Throws on a non-OK response. */
+ *  background-refresh paths. Throws on a non-OK response; the thrown error
+ *  carries `.status` so callers can distinguish a 404 (gone) from transient. */
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status} for ${url}`), { status: res.status });
   const json = await res.json();
   // Blunt cap: only the cold path can grow the map, so only evict when adding a
   // new key. A refresh (key already present) just overwrites in place.
@@ -365,13 +366,17 @@ async function fetchJson(url: string): Promise<unknown> {
 }
 
 /** Kick off a background refresh, deduped so a burst of stale hits spawns at
- *  most one in-flight fetch per URL. Errors are swallowed — the stale entry
- *  stays served until a refresh succeeds. */
+ *  most one in-flight fetch per URL. A **404 evicts** the entry — the resource is
+ *  gone (e.g. a deleted listing), so stop serving the stale copy; the next read
+ *  goes cold and 404s to the caller. Any other failure (network / 5xx) is
+ *  transient and keeps the last-good value served. */
 function revalidate(url: string): void {
   if (_inflight.has(url)) return;
   const p = fetchJson(url)
     .then(() => undefined)
-    .catch(() => undefined)
+    .catch((err: unknown) => {
+      if ((err as { status?: number } | null)?.status === 404) _memo.delete(url);
+    })
     .finally(() => {
       _inflight.delete(url);
     });
