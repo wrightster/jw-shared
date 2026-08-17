@@ -1,6 +1,6 @@
 {
   "name": "@jw/shared",
-  "version": "0.7.5",
+  "version": "0.7.15",
   "private": true,
   "type": "module",
   "exports": {
