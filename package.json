@@ -1,11 +1,12 @@
 {
   "name": "@jw/shared",
-  "version": "0.7.15",
+  "version": "0.7.16",
   "private": true,
   "type": "module",
   "exports": {
     "./api": "./src/api.ts",
     "./jsonLd": "./src/jsonLd.ts",
+    "./llmsTxt": "./src/llmsTxt.ts",
     "./lotMap": "./src/lotMap.ts",
     "./components/Seo.astro": "./src/components/Seo.astro",
     "./components/ListingCard.astro": "./src/components/ListingCard.astro",
