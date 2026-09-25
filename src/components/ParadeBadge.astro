@@ -1,0 +1,28 @@
+---
+// "Parade of Homes" badge for a home entered in a current parade.
+//
+// Verification counts `data-parade-entry` (one per parade home per page), so
+// pass `mark={false}` wherever the same home is rendered a second time on the
+// page (e.g. the list-view row that duplicates a grid card). Style through the
+// `parade-badge` class — never select on the data attribute in CSS. Colours come
+// from `--parade-badge-bg` / `--parade-badge-fg` (defaults in tokens.css), so a
+// consumer re-themes it without touching markup.
+
+import type { ApiParadeRef } from '@jw/shared/api';
+import { paradeBadgeLabel } from '@jw/shared/api';
+
+interface Props {
+  parade: ApiParadeRef;
+  mark?: boolean;
+  class?: string;
+}
+
+const { parade, mark = true, class: extra } = Astro.props;
+const builder = parade.builder?.short_name || parade.builder?.name;
+---
+
+<span
+  class:list={['parade-badge', extra]}
+  data-parade-entry={mark ? parade.slug : undefined}
+  title={builder ? `${parade.name} · ${builder}` : parade.name}
+>{paradeBadgeLabel(parade)}</span>

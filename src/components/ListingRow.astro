@@ -15,14 +15,18 @@
 
 import type { ApiListing } from '@jw/shared/api';
 import { formatPrice, photoSrc, photoSrcSet, photoDimensions, photoAlt } from '@jw/shared/api';
+import ParadeBadge from './ParadeBadge.astro';
 
 interface Props {
   listing: ApiListing;
   index?: number;
   headline?: string;
+  /** Emit the parade badge's `data-parade-entry` marker. Pass false when the
+   *  row duplicates a ListingCard on the same page (grid/list toggle). */
+  paradeMark?: boolean;
 }
 
-const { listing, headline, index } = Astro.props;
+const { listing, headline, index, paradeMark = true } = Astro.props;
 // Eager-load the first few rows (above the fold) so the LCP thumbnail isn't
 // deferred; flag the very first as high priority.
 const eager = index != null && index < 3;
@@ -74,6 +78,7 @@ const priceValue = parseFloat(listing.list_price);
         <span class="listing-row-status" data-status={listing.status}>
           {listing.status_label}
         </span>
+        {listing.parade && <ParadeBadge parade={listing.parade} mark={paradeMark} class="listing-row-parade" />}
         <address class="listing-row-county not-italic">{listing.county} County</address>
       </div>
       <h3 class="listing-row-title">{title}</h3>

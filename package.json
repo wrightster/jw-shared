@@ -1,6 +1,6 @@
 {
   "name": "@jw/shared",
-  "version": "0.7.16",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -13,6 +13,7 @@
     "./components/ListingRow.astro": "./src/components/ListingRow.astro",
     "./components/VideoSection.astro": "./src/components/VideoSection.astro",
     "./components/LotMap.astro": "./src/components/LotMap.astro",
+    "./components/ParadeBadge.astro": "./src/components/ParadeBadge.astro",
     "./components/ListingGallery.astro": "./src/components/ListingGallery.astro",
     "./styles/tokens.css": {
       "style": "./src/styles/tokens.css",

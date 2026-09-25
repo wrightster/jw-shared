@@ -883,6 +883,13 @@
   .listing-card-status {
     @apply absolute top-4 right-0 pl-4 pr-4 py-1 rounded-l-sm text-xs font-display font-semibold uppercase tracking-widest;
   }
+  /* Parade of Homes badge: sits under the status pill on the card image. */
+  .parade-badge {
+    @apply inline-flex items-center text-xs font-display font-semibold uppercase tracking-widest whitespace-nowrap;
+    background-color: var(--parade-badge-bg);
+    color: var(--parade-badge-fg);
+  }
+  .listing-card-parade { @apply absolute top-12 right-0 pl-4 pr-4 py-1 rounded-l-sm; }
   .listing-card-body  { @apply p-5; }
   .listing-card-title { @apply font-display text-lg text-earth-900 leading-snug mb-2 transition-colors duration-300; }
   .listing-card:hover .listing-card-title { color: var(--color-red-600); }
@@ -919,6 +926,7 @@
   .listing-row-status {
     @apply shrink-0 text-[10px] font-display font-semibold uppercase tracking-widest px-2 py-0.5 rounded-sm;
   }
+  .listing-row-parade { @apply shrink-0 text-[10px] px-2 py-0.5 rounded-sm; }
 
 .listing-row-title  {
     @apply font-display text-base text-earth-900 leading-snug truncate transition-colors duration-200;

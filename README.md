@@ -12,10 +12,11 @@ the shared version mirrors JWLC's shape. See `../../CLAUDE.md` and
 ## Provides
 
 - **API client + types** (`@jw/shared/api`) — `fetchListings`/`fetchListing`/
-  `fetchTeam`/`fetchNeighborhoods`, the `ApiListing`/`ApiPhoto`/`ApiDocument`
+  `fetchTeam`/`fetchNeighborhoods`/`fetchParade` (+ `?parade=` on listings), the `ApiListing`/`ApiPhoto`/`ApiDocument`
   types, image/format helpers, and a short in-process response memo.
 - **Components** — `ListingCard`, `ListingRow`, `ListingGallery`, `VideoSection`,
-  `LotMap`, `Seo`. Cards accept an `index` prop so the first row loads eagerly.
+  `LotMap`, `Seo`, `ParadeBadge` (shown on cards/rows when `listing.parade` is set;
+  emits `data-parade-entry`, themed via `--parade-badge-bg`/`--parade-badge-fg`). Cards accept an `index` prop so the first row loads eagerly.
 - **Styles** — `styles/tokens.css` (brand palette; text steps meet WCAG AA) and
   `styles/components.css` (page/component classes; per-site chrome stays local).
 - **JSON-LD** (`@jw/shared/jsonLd`) and the `lotMap` geometry types.

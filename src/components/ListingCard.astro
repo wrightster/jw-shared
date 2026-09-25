@@ -16,6 +16,7 @@
 
 import type { ApiListing } from '@jw/shared/api';
 import { formatPrice, photoSrc, photoSrcSet, photoDimensions, photoAlt } from '@jw/shared/api';
+import ParadeBadge from './ParadeBadge.astro';
 
 interface Props {
   listing: ApiListing;
@@ -83,6 +84,7 @@ const priceValue = parseFloat(listing.list_price);
     <span class="listing-card-status" data-status={listing.status}>
       {listing.status_label}
     </span>
+    {listing.parade && <ParadeBadge parade={listing.parade} class="listing-card-parade" />}
   </div>
 
   <!-- Content -->

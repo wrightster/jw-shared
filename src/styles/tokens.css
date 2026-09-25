@@ -62,3 +62,10 @@
   /* Border radius — single token controls all rounded-sm usage site-wide */
   --radius-sm: 2px;
 }
+
+/* Parade of Homes badge (ParadeBadge.astro). Public custom properties so a
+ * consumer re-themes the badge from its own global.css. */
+:root {
+  --parade-badge-bg: var(--color-earth-900);
+  --parade-badge-fg: var(--color-gold-300);
+}

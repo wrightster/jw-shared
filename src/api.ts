@@ -240,6 +240,9 @@ export interface ApiListing {
   co_agent: { name: string; phone: string } | null;
   primary_photo: ApiPhoto | null;
   photo_count: number;
+  /** Parade of Homes badge: the home's entry in a current parade, else null.
+   *  Always present on public REST; optional so older payloads still type. */
+  parade?: ApiParadeRef | null;
   // Detail-only
   photos?: ApiPhoto[];
   documents?: ApiDocument[];
@@ -407,6 +410,8 @@ export interface ListingsQuery {
   /** Neighborhood slug or UUID — restricts to listings in that community. */
   neighborhood?: string;
   status?: ApiListing['status'];
+  /** Parade slug — restricts to listings entered in that (published) parade. */
+  parade?: string;
   perPage?: number;
 }
 
@@ -419,6 +424,7 @@ function buildListingsUrl(site: string, q: ListingsQuery, page?: number): string
   if (q.city) params.set('city', q.city);
   if (q.neighborhood) params.set('neighborhood', q.neighborhood);
   if (q.status) params.set('status', q.status);
+  if (q.parade) params.set('parade', q.parade);
   if (page) params.set('page', String(page));
   return `${BASE_URL}/listings?${params}`;
 }
@@ -553,6 +559,117 @@ export async function fetchNeighborhood(slug: string): Promise<ApiNeighborhood |
   } catch {
     return null;
   }
+}
+
+// ---------- Parades ----------
+//
+// A Parade of Homes (or similar builder tour) from the office: the event, its
+// public open windows, and the homes entered in it. Datetimes are ISO 8601 with
+// the America/New_York offset. Contract: jwrg_office/docs/API.md § Parades.
+
+export interface ApiParadeBuilder {
+  name: string;
+  short_name: string | null;
+  slug: string;
+  brand_color: string | null;
+}
+
+/** The `parade` badge carried by listings and lots (`ApiParadeBadge` in API.md). */
+export interface ApiParadeRef {
+  slug: string;
+  name: string;
+  entry_number: string | null;
+  builder: ApiParadeBuilder | null;
+}
+
+/** A lot as embedded in a parade entry (the `/neighborhoods/{n}/lots` shape). */
+export interface ApiParadeLot {
+  id: string;
+  lot_number: string | null;
+  status: string | null;
+  address: string | null;
+  size_acres: string | null;
+  parade?: ApiParadeRef | null;
+  [key: string]: unknown;
+}
+
+export interface ApiParadeEntry {
+  entry_number: string | null;
+  sort_order: number;
+  kind: 'listing' | 'lot';
+  builder: ApiParadeBuilder | null;
+  neighborhood: { slug: string; name: string } | null;
+  listing: ApiListing | null;
+  lot: ApiParadeLot | null;
+}
+
+export interface ApiParade {
+  slug: string;
+  name: string;
+  organizer: string | null;
+  organizer_url: string | null;
+  status: string;
+  dates: { starts_at: string; ends_at: string }[];
+  entries: ApiParadeEntry[];
+  neighborhoods: { slug: string; name: string; entry_count: number }[];
+}
+
+/**
+ * A published parade by slug. `site` scopes listing entries to that marketing
+ * site (lot entries ignore it). Null on a 404 (unknown/draft/archived) or any
+ * error, so a missing parade renders an empty state rather than a 500.
+ */
+export async function fetchParade(
+  slug: string,
+  opts: { site?: string } = {},
+): Promise<ApiParade | null> {
+  try {
+    const qs = opts.site ? `?site=${encodeURIComponent(opts.site)}` : '';
+    const json = await cachedJson(`${BASE_URL}/parades/${encodeURIComponent(slug)}${qs}`);
+    const data = json?.data as ApiParade | undefined;
+    if (!data) return null;
+    return {
+      ...data,
+      dates: data.dates ?? [],
+      entries: data.entries ?? [],
+      neighborhoods: data.neighborhoods ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Badge text: "Parade of Homes", plus " · #14" when the entry number is set. */
+export function paradeBadgeLabel(parade: Pick<ApiParadeRef, 'entry_number'>): string {
+  const n = parade.entry_number?.trim();
+  return n ? `Parade of Homes · #${n}` : 'Parade of Homes';
+}
+
+const ET = 'America/New_York';
+
+/**
+ * One open window as a short Eastern-time line, e.g. "Sat, Oct 3 · 12–5 pm"
+ * (meridiem shown once when both ends share it: "10 am–5 pm" otherwise).
+ */
+export function formatParadeDate(d: { starts_at: string; ends_at: string }): string {
+  const start = new Date(d.starts_at);
+  const end = new Date(d.ends_at);
+  const day = new Intl.DateTimeFormat('en-US', {
+    timeZone: ET, weekday: 'short', month: 'short', day: 'numeric',
+  }).format(start);
+  const parts = (t: Date) => {
+    const p = new Intl.DateTimeFormat('en-US', {
+      timeZone: ET, hour: 'numeric', minute: '2-digit', hour12: true,
+    }).formatToParts(t);
+    const hour = p.find((x) => x.type === 'hour')?.value ?? '';
+    const minute = p.find((x) => x.type === 'minute')?.value ?? '00';
+    const mer = (p.find((x) => x.type === 'dayPeriod')?.value ?? '').toLowerCase();
+    return { time: minute === '00' ? hour : `${hour}:${minute}`, mer };
+  };
+  const s = parts(start);
+  const e = parts(end);
+  const range = s.mer === e.mer ? `${s.time}–${e.time} ${e.mer}` : `${s.time} ${s.mer}–${e.time} ${e.mer}`;
+  return `${day} · ${range}`;
 }
 
 // ---------- Team ----------
