@@ -28,7 +28,7 @@ the shared version mirrors JWLC's shape. See `../../CLAUDE.md` and
   (in `jsonLd`) wrap it for the community sites. `MapsLink` renders a Google Maps
   directions href and retargets it on-device to Apple Maps (iOS) or a `geo:` URI
   (Android → default nav app). `isStreetAddress` rejects placeholders like
-  "0 Lawrence Rd" / "Cannady Mill Road" so they never become titles or `streetAddress`.
+  "0 Lawrence Rd" / "Cannady Mill Road" so they never become titles or `streetAddress`; corner-lot lines ("1412 Beckett Blvd / 3830 Joyce Row") use the first frontage (`primaryStreet`), and a lot always falls back to its community rather than a road search.
 
 Consumed by pinning a GitHub tag: `"@jw/shared": "github:wrightster/jw-shared#vX.Y.Z"`.
 Change code here → tag a release → bump each app's pin.

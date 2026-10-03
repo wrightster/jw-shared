@@ -69,6 +69,16 @@ export function isStreetAddress(address: string | null | undefined): boolean {
   return /^\s*[1-9]\d*[A-Za-z]?\s+[A-Za-z]/.test(address);
 }
 
+/**
+ * First frontage of a multi-frontage line: corner lots are stored as
+ * "1412 Beckett Blvd / 3830 Joyce Row"; navigation and `streetAddress` take
+ * the first one.
+ */
+export function primaryStreet(address: string | null | undefined): string | null {
+  if (!address) return null;
+  return address.split(/\s+\/\s+|\s*;\s*/)[0]!.trim() || null;
+}
+
 /** "City, ST 27587" — whichever parts exist. */
 export function localityLine(p: MapsPlace): string {
   const stZip = [p.state, p.zip].filter(Boolean).join(' ');
@@ -91,8 +101,12 @@ export function resolveMapTarget(
   label?: string,
 ): MapTarget | null {
   const own = coords(place);
-  const street = place && isStreetAddress(place.address) ? fullAddress(place) : undefined;
-  const name = label || street || (place?.address ? fullAddress(place) : community?.name) || '';
+  const first = primaryStreet(place?.address);
+  const street = place && isStreetAddress(first) ? fullAddress({ ...place, address: first }) : undefined;
+  // Placeholder lines are tidied before they label a link or seed a search.
+  const road = place && !street && place.address ? cleanRoad(place.address) : '';
+  const roadLine = road ? fullAddress({ ...place, address: road }) : '';
+  const name = label || street || roadLine || community?.name || '';
 
   if (own) return { label: name, ...own, precision: 'exact' };
   if (street) return { label: name, query: street, precision: 'address' };
@@ -107,11 +121,25 @@ export function resolveMapTarget(
   }
 
   // Last resort: road or area text ("Brassfield Road, Creedmoor, NC 27522").
-  const area = place ? fullAddress(place) : '';
+  const area = roadLine;
   // Never a text search on the community NAME: "Maxton, Louisburg, NC" can
   // resolve to the town of Maxton two hours away. No coordinates, no link.
-  if (area && place?.address) return { label: name || area, query: area, precision: 'area' };
+  // Only when the line names a road ("Brassfield Road", "NC Hwy 42") — a
+  // description like "12+ Acres East of Louisburg" just drops a pin in town.
+  if (area && hasRoadName(road)) return { label: name || area, query: area, precision: 'area' };
   return null;
+}
+
+const ROAD = /\b(road|rd|street|st|lane|ln|drive|dr|court|ct|trail|trl|way|avenue|ave|highway|hwy|parkway|pkwy|place|pl|circle|cir|boulevard|blvd|run|trace|loop|pike)\b\.?/i;
+
+/** "0 Lawrence Rd" → "Lawrence Rd"; "(tract B) Brassfield Road" → "Brassfield Road". */
+export function cleanRoad(address: string): string {
+  return address.replace(/\([^)]*\)/g, ' ').replace(/^\s*0+\s+/, '').replace(/\s+/g, ' ').trim();
+}
+
+/** True when an address line names a road, even without a house number. */
+export function hasRoadName(address: string | null | undefined): boolean {
+  return !!address && ROAD.test(address);
 }
 
 const dest = (t: MapTarget): string => (t.lat != null && t.lng != null ? `${t.lat},${t.lng}` : (t.query ?? ''));

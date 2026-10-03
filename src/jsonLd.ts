@@ -6,7 +6,7 @@
 // empty strings or null into the graph.
 
 import type { ApiListing } from './api';
-import { isStreetAddress, mapUrl, resolveMapTarget, type MapTarget } from './maps';
+import { isStreetAddress, mapUrl, primaryStreet, resolveMapTarget, type MapTarget } from './maps';
 
 /**
  * Strip HTML tags, decode the entities a rich-text field actually emits, and
@@ -67,7 +67,10 @@ function priceFor(listing: ApiListing): string | undefined {
 
 function postalAddress(listing: ApiListing): Record<string, unknown> {
   const addr: Record<string, unknown> = { '@type': 'PostalAddress', addressCountry: 'US' };
-  if (listing.address) addr.streetAddress = listing.address;
+  // Placeholder lines ("Brassfield Road", "12+ Acres East of Louisburg") aren't
+  // street addresses; the listing name already carries them.
+  const street = primaryStreet(listing.address);
+  if (isStreetAddress(street)) addr.streetAddress = street;
   if (listing.city) addr.addressLocality = listing.city;
   if (listing.state) addr.addressRegion = listing.state;
   if (listing.zip) addr.postalCode = listing.zip;
@@ -157,7 +160,7 @@ export function listingJsonLd(
   const target = resolveMapTarget(listing, hood ? { ...hood, name: hood.name } : null);
   const about = json.about as Record<string, unknown> | undefined;
   if (about) {
-    if (target) about.hasMap = mapUrl(target);
+    if (target && target.precision !== 'area') about.hasMap = mapUrl(target);
     if (hood) about.containedInPlace = communityRef(hood.name, null, hood.latitude, hood.longitude);
   }
 
@@ -394,8 +397,13 @@ export function communityPlace(ctx: NeighborhoodContext) {
  * when the office has them, otherwise the community.
  */
 export function lotMapTarget(lot: NeighborhoodLot, ctx: NeighborhoodContext): MapTarget | null {
-  const place = { address: lot.address, city: ctx.city, state: ctx.region, zip: ctx.postalCode, latitude: lot.latitude, longitude: lot.longitude };
-  return resolveMapTarget(place, communityPlace(ctx));
+  // A lot is inside the community, so a placeholder line ("0 Yancey Rd") falls
+  // back to the community rather than a road search.
+  const first = primaryStreet(lot.address);
+  const place = { address: isStreetAddress(first) ? first : null, city: ctx.city, state: ctx.region, zip: ctx.postalCode, latitude: lot.latitude, longitude: lot.longitude };
+  // A lot with its own pin but no address is labelled as the lot, not the community.
+  const pinned = lot.latitude != null && lot.longitude != null && !place.address;
+  return resolveMapTarget(place, communityPlace(ctx), pinned ? `${ctxLotLabel(ctx)} ${lot.number}, ${ctx.name}` : undefined);
 }
 
 /**
@@ -481,7 +489,8 @@ export function lotJsonLd(
     '@context': 'https://schema.org',
     '@type': 'RealEstateListing',
     url: `${base}${ctxLotsPath(ctx)}/${encodeURIComponent(lot.id)}`,
-    name: `${title} — ${ctx.name}`,
+    // A real street address leads the name — it's what people search a lot by.
+    name: isStreetAddress(primaryStreet(lot.address)) ? `${primaryStreet(lot.address)} — ${title}, ${ctx.name}` : `${title} — ${ctx.name}`,
   };
 
   const about: Record<string, unknown> = { '@type': 'Place', name: title };
@@ -490,8 +499,9 @@ export function lotJsonLd(
   // community's locality, so the parcel is still geographically placed.
   // Placeholder lines ("0 Lawrence Rd") are never emitted as a streetAddress.
   const communityAddr = communityAddress(ctx);
-  if (isStreetAddress(lot.address)) {
-    about.address = { ...(communityAddr ?? { '@type': 'PostalAddress', addressCountry: 'US' }), streetAddress: lot.address!.trim() };
+  const lotStreet = primaryStreet(lot.address);
+  if (isStreetAddress(lotStreet)) {
+    about.address = { ...(communityAddr ?? { '@type': 'PostalAddress', addressCountry: 'US' }), streetAddress: lotStreet };
   } else if (communityAddr) {
     about.address = communityAddr;
   }
