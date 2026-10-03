@@ -1,6 +1,6 @@
 {
   "name": "@jw/shared",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -8,6 +8,7 @@
     "./jsonLd": "./src/jsonLd.ts",
     "./llmsTxt": "./src/llmsTxt.ts",
     "./lotMap": "./src/lotMap.ts",
+    "./maps": "./src/maps.ts",
     "./components/Seo.astro": "./src/components/Seo.astro",
     "./components/ListingCard.astro": "./src/components/ListingCard.astro",
     "./components/ListingRow.astro": "./src/components/ListingRow.astro",
@@ -15,6 +16,7 @@
     "./components/LotMap.astro": "./src/components/LotMap.astro",
     "./components/ParadeBadge.astro": "./src/components/ParadeBadge.astro",
     "./components/ListingGallery.astro": "./src/components/ListingGallery.astro",
+    "./components/MapsLink.astro": "./src/components/MapsLink.astro",
     "./styles/tokens.css": {
       "style": "./src/styles/tokens.css",
       "default": "./src/styles/tokens.css"

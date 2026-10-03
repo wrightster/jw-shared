@@ -697,7 +697,10 @@
   .listing-county-badge { @apply text-xs font-display font-semibold text-earth-500 uppercase tracking-widest; }
   .listing-title        { @apply font-display text-4xl text-earth-900 leading-tight; }
   .listing-address-row  { @apply text-earth-500 mt-3 flex items-center gap-2; }
-  .listing-address-icon { @apply w-4 h-4; }
+  .listing-address-icon { @apply w-4 h-4 shrink-0; }
+  /* Address / "Get directions" link (MapsLink) — opens the visitor's map app. */
+  .listing-address-row a { @apply text-earth-700 underline decoration-earth-300 underline-offset-4 hover:text-red-600 hover:decoration-red-600 transition-colors; }
+  .maps-link           { @apply text-sm font-semibold text-red-600 hover:text-red-700 whitespace-nowrap; }
 
   .listing-key-stats  { @apply grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5 pb-5 border-b border-earth-200; }
   .listing-stat-cell  { @apply bg-earth-50 rounded-sm p-5; }

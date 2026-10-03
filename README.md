@@ -19,7 +19,16 @@ the shared version mirrors JWLC's shape. See `../../CLAUDE.md` and
   emits `data-parade-entry`, themed via `--parade-badge-bg`/`--parade-badge-fg`). Cards accept an `index` prop so the first row loads eagerly.
 - **Styles** — `styles/tokens.css` (brand palette; text steps meet WCAG AA) and
   `styles/components.css` (page/component classes; per-site chrome stays local).
-- **JSON-LD** (`@jw/shared/jsonLd`) and the `lotMap` geometry types.
+- **JSON-LD** (`@jw/shared/jsonLd`) and the `lotMap` geometry types. Community/lot
+  builders take coordinates (`NeighborhoodContext.latitude/longitude`, lot
+  `latitude/longitude`) and emit `geo`, `hasMap` and `containedInPlace`.
+- **Directions links** (`@jw/shared/maps` + `MapsLink.astro`) — `resolveMapTarget`
+  picks the destination (own pin → real street address → community pin → own road
+  text; never a text search on a community name), `lotMapTarget`/`communityMapTarget`
+  (in `jsonLd`) wrap it for the community sites. `MapsLink` renders a Google Maps
+  directions href and retargets it on-device to Apple Maps (iOS) or a `geo:` URI
+  (Android → default nav app). `isStreetAddress` rejects placeholders like
+  "0 Lawrence Rd" / "Cannady Mill Road" so they never become titles or `streetAddress`.
 
 Consumed by pinning a GitHub tag: `"@jw/shared": "github:wrightster/jw-shared#vX.Y.Z"`.
 Change code here → tag a release → bump each app's pin.

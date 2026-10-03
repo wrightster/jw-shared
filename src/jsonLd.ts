@@ -6,6 +6,7 @@
 // empty strings or null into the graph.
 
 import type { ApiListing } from './api';
+import { isStreetAddress, mapUrl, resolveMapTarget, type MapTarget } from './maps';
 
 /**
  * Strip HTML tags, decode the entities a rich-text field actually emits, and
@@ -74,8 +75,8 @@ function postalAddress(listing: ApiListing): Record<string, unknown> {
 }
 
 function geoFor(listing: ApiListing): Record<string, unknown> | undefined {
-  if (listing.latitude == null || listing.longitude == null) return undefined;
-  return { '@type': 'GeoCoordinates', latitude: listing.latitude, longitude: listing.longitude };
+  // The office serializes listing coordinates as decimal strings; schema.org wants numbers.
+  return geoNode(listing.latitude, listing.longitude);
 }
 
 /**
@@ -151,9 +152,42 @@ export function listingJsonLd(
     json.about = about;
   }
 
+  // Map link + the community the listing sits in (when the office links one).
+  const hood = listing.neighborhood;
+  const target = resolveMapTarget(listing, hood ? { ...hood, name: hood.name } : null);
+  const about = json.about as Record<string, unknown> | undefined;
+  if (about) {
+    if (target) about.hasMap = mapUrl(target);
+    if (hood) about.containedInPlace = communityRef(hood.name, null, hood.latitude, hood.longitude);
+  }
+
   json.broker = { '@type': 'RealEstateAgent', name: brokerName, url: base };
 
   return json;
+}
+
+/** Lightweight Place node for "this parcel is in <community>". */
+function communityRef(
+  name: string,
+  url: string | null | undefined,
+  lat: number | string | null | undefined,
+  lng: number | string | null | undefined,
+): Record<string, unknown> {
+  const ref: Record<string, unknown> = { '@type': 'Place', name };
+  if (url) ref.url = url;
+  const g = geoNode(lat, lng);
+  if (g) ref.geo = g;
+  return ref;
+}
+
+function geoNode(
+  lat: number | string | null | undefined,
+  lng: number | string | null | undefined,
+): Record<string, unknown> | undefined {
+  const la = typeof lat === 'string' ? parseFloat(lat) : lat;
+  const ln = typeof lng === 'string' ? parseFloat(lng) : lng;
+  if (la == null || ln == null || !Number.isFinite(la) || !Number.isFinite(ln)) return undefined;
+  return { '@type': 'GeoCoordinates', latitude: la, longitude: ln };
 }
 
 /** Home › Listings › <listing> breadcrumb for a listing detail page. */
@@ -259,6 +293,9 @@ export interface NeighborhoodLot {
   /** Asking price, when the office has one. */
   price?: number | string | null;
   address?: string | null;
+  /** The parcel's own coordinates, when the office has them. */
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   builder?: { name?: string | null; short?: string | null } | null;
 }
 
@@ -281,6 +318,11 @@ export interface NeighborhoodContext {
   /** Two-letter state code, e.g. "NC". */
   region?: string;
   postalCode?: string;
+  /** Entrance / sales-office street line, when the community has one. */
+  streetAddress?: string | null;
+  /** Community location (office `neighborhoods.latitude/longitude`). */
+  latitude?: number | string | null;
+  longitude?: number | string | null;
 }
 
 const ctxBase = (ctx: NeighborhoodContext): string => ctx.url.replace(/\/$/, '');
@@ -329,6 +371,33 @@ function communityAddress(ctx: NeighborhoodContext): Record<string, unknown> | u
   return hasAny ? addr : undefined;
 }
 
+/** The community as a maps destination (its coordinates / locality). */
+export function communityMapTarget(ctx: NeighborhoodContext): MapTarget | null {
+  return resolveMapTarget(null, communityPlace(ctx));
+}
+
+/** NeighborhoodContext → the shape `resolveMapTarget` takes as a community. */
+export function communityPlace(ctx: NeighborhoodContext) {
+  return {
+    name: ctx.name,
+    address: ctx.streetAddress,
+    city: ctx.city,
+    state: ctx.region,
+    zip: ctx.postalCode,
+    latitude: ctx.latitude,
+    longitude: ctx.longitude,
+  };
+}
+
+/**
+ * Where a lot's "directions" link goes: its own street address or coordinates
+ * when the office has them, otherwise the community.
+ */
+export function lotMapTarget(lot: NeighborhoodLot, ctx: NeighborhoodContext): MapTarget | null {
+  const place = { address: lot.address, city: ctx.city, state: ctx.region, zip: ctx.postalCode, latitude: lot.latitude, longitude: lot.longitude };
+  return resolveMapTarget(place, communityPlace(ctx));
+}
+
 /**
  * schema.org Place for the community itself — emit once on the home page.
  *
@@ -351,7 +420,14 @@ export function neighborhoodJsonLd(
   if (desc) json.description = desc;
 
   const address = communityAddress(ctx);
-  if (address) json.address = address;
+  if (address) {
+    if (ctx.streetAddress && isStreetAddress(ctx.streetAddress)) address.streetAddress = ctx.streetAddress;
+    json.address = address;
+  }
+  const geo = geoNode(ctx.latitude, ctx.longitude);
+  if (geo) json.geo = geo;
+  const target = communityMapTarget(ctx);
+  if (target) json.hasMap = mapUrl(target);
 
   if (lots?.length) {
     const sellable = lots.filter(isSellableLot);
@@ -410,15 +486,20 @@ export function lotJsonLd(
 
   const about: Record<string, unknown> = { '@type': 'Place', name: title };
 
-  // A lot's own street address when the office has one (Preserve West does);
-  // otherwise fall back to the community's locality so the parcel is still
-  // geographically placed.
+  // A lot's own street address when the office has a real one; otherwise the
+  // community's locality, so the parcel is still geographically placed.
+  // Placeholder lines ("0 Lawrence Rd") are never emitted as a streetAddress.
   const communityAddr = communityAddress(ctx);
-  if (lot.address) {
-    about.address = { ...(communityAddr ?? { '@type': 'PostalAddress', addressCountry: 'US' }), streetAddress: lot.address };
+  if (isStreetAddress(lot.address)) {
+    about.address = { ...(communityAddr ?? { '@type': 'PostalAddress', addressCountry: 'US' }), streetAddress: lot.address!.trim() };
   } else if (communityAddr) {
     about.address = communityAddr;
   }
+  const ownGeo = geoNode(lot.latitude, lot.longitude);
+  if (ownGeo) about.geo = ownGeo;
+  const target = lotMapTarget(lot, ctx);
+  if (target) about.hasMap = mapUrl(target);
+  about.containedInPlace = communityRef(ctx.name, ctxBase(ctx), ctx.latitude, ctx.longitude);
 
   const props: Record<string, unknown>[] = [];
   if (typeof lot.acres === 'number' && lot.acres > 0) {

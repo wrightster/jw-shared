@@ -1,0 +1,56 @@
+---
+// "Get directions" link. The href is a Google Maps directions URL (works on
+// every device, and is what crawlers see); a small script swaps it on the
+// device for Apple Maps on iPhone/iPad and a `geo:` URI on Android, which
+// opens the user's default navigation app. Renders nothing when `target` is
+// null, so callers can pass `resolveMapTarget(...)` straight through.
+//
+// Unstyled — pass `class` and put whatever text/icon you want in the slot.
+
+import type { MapTarget } from '@jw/shared/maps';
+import { appleDirectionsUrl, geoUri, googleDirectionsUrl } from '@jw/shared/maps';
+
+interface Props {
+  target: MapTarget | null;
+  class?: string;
+  /** Accessible name; defaults to "Directions to <label> (opens in maps)". */
+  title?: string;
+}
+
+const { target, class: cls, title } = Astro.props;
+const label = title ?? (target ? `Directions to ${target.label} (opens in maps)` : '');
+---
+
+{target && (
+  <a
+    class={cls}
+    href={googleDirectionsUrl(target)}
+    target="_blank"
+    rel="noopener"
+    title={label}
+    data-maps-link
+    data-maps-ios={appleDirectionsUrl(target)}
+    data-maps-android={geoUri(target)}
+    data-maps-precision={target.precision}
+  ><slot /></a>
+)}
+
+<script>
+  const ua = navigator.userAgent;
+  const ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  if (ios || android) {
+    const key = ios ? 'mapsIos' : 'mapsAndroid';
+    const retarget = () =>
+      document.querySelectorAll<HTMLAnchorElement>('a[data-maps-link]').forEach((a) => {
+        const url = a.dataset[key];
+        if (url) {
+          a.href = url;
+          // A geo:/Maps URL hands off to an app — no blank tab left behind.
+          a.removeAttribute('target');
+        }
+      });
+    retarget();
+    document.addEventListener('astro:page-load', retarget);
+  }
+</script>

@@ -213,7 +213,10 @@ export interface ApiListing {
   county: string;
   latitude: number | null;
   longitude: number | null;
-  neighborhood: { id: string; name: string; slug: string } | null;
+  // latitude/longitude: the community's location (office ≥ 2026-10) — the
+  // fallback directions target when a listing has no coordinates or real
+  // street address. Optional so older office builds still type.
+  neighborhood: { id: string; name: string; slug: string; latitude?: number | null; longitude?: number | null } | null;
   list_price: string;
   original_price: string | null;
   sold_price: string | null;
