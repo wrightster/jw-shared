@@ -68,4 +68,13 @@
 :root {
   --parade-badge-bg: var(--color-earth-900);
   --parade-badge-fg: var(--color-gold-300);
+
+  /* Award winners (`parade-badge--gold|silver|bronze`): flat medal colours.
+   * Each pair clears WCAG AA for the badge's small bold caps. */
+  --parade-award-gold-bg:   #d9a62e;
+  --parade-award-gold-fg:   var(--color-earth-950);
+  --parade-award-silver-bg: #c3c7cc;
+  --parade-award-silver-fg: var(--color-earth-950);
+  --parade-award-bronze-bg: #94582b;
+  --parade-award-bronze-fg: #ffffff;
 }

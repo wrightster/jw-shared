@@ -892,6 +892,11 @@
     background-color: var(--parade-badge-bg);
     color: var(--parade-badge-fg);
   }
+  /* Award winners: the modifier re-points the badge's two properties, so any
+     surface that reads them (e.g. a site's listing-page banner) follows. */
+  .parade-badge--gold   { --parade-badge-bg: var(--parade-award-gold-bg);   --parade-badge-fg: var(--parade-award-gold-fg); }
+  .parade-badge--silver { --parade-badge-bg: var(--parade-award-silver-bg); --parade-badge-fg: var(--parade-award-silver-fg); }
+  .parade-badge--bronze { --parade-badge-bg: var(--parade-award-bronze-bg); --parade-badge-fg: var(--parade-award-bronze-fg); }
   .listing-card-parade { @apply absolute top-12 right-0 pl-4 pr-4 py-1 rounded-l-sm; }
   .listing-card-body  { @apply p-5; }
   .listing-card-title { @apply font-display text-lg text-earth-900 leading-snug mb-2 transition-colors duration-300; }

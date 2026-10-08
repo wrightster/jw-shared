@@ -577,11 +577,19 @@ export interface ApiParadeBuilder {
   brand_color: string | null;
 }
 
-/** The `parade` badge carried by listings and lots (`ApiParadeBadge` in API.md). */
+/** The organizer's award for a parade entry. */
+export type ApiParadeAward = 'gold' | 'silver' | 'bronze';
+
+/**
+ * The `parade` badge carried by listings and lots (`ApiParadeBadge` in API.md).
+ * An award winner keeps its badge after the parade ends (office ≥ 14.2.0).
+ */
 export interface ApiParadeRef {
   slug: string;
   name: string;
   entry_number: string | null;
+  /** Absent on office builds older than 14.2.0. */
+  award?: ApiParadeAward | null;
   builder: ApiParadeBuilder | null;
 }
 
@@ -598,6 +606,7 @@ export interface ApiParadeLot {
 
 export interface ApiParadeEntry {
   entry_number: string | null;
+  award?: ApiParadeAward | null;
   sort_order: number;
   kind: 'listing' | 'lot';
   builder: ApiParadeBuilder | null;
@@ -642,8 +651,27 @@ export async function fetchParade(
   }
 }
 
-/** Badge text: "Parade of Homes", plus " · #14" when the entry number is set. */
-export function paradeBadgeLabel(parade: Pick<ApiParadeRef, 'entry_number'>): string {
+const AWARD_LABELS: Record<ApiParadeAward, string> = { gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
+
+/** "Gold Award", or null for an entry without one (or an unknown value). */
+export function paradeAwardLabel(award: string | null | undefined): string | null {
+  const name = award ? AWARD_LABELS[award as ApiParadeAward] : undefined;
+  return name ? `${name} Award` : null;
+}
+
+/** `parade-badge--gold` etc. for an award winner (medal colours), else undefined. */
+export function paradeAwardClass(award: string | null | undefined): string | undefined {
+  return award && award in AWARD_LABELS ? `parade-badge--${award}` : undefined;
+}
+
+/**
+ * Badge text: "Parade of Homes", plus " · #14" when the entry number is set.
+ * An award winner reads "Gold Award · Parade of Homes" instead (no number —
+ * the badge has to fit on a card).
+ */
+export function paradeBadgeLabel(parade: Pick<ApiParadeRef, 'entry_number' | 'award'>): string {
+  const award = paradeAwardLabel(parade.award);
+  if (award) return `${award} · Parade of Homes`;
   const n = parade.entry_number?.trim();
   return n ? `Parade of Homes · #${n}` : 'Parade of Homes';
 }
