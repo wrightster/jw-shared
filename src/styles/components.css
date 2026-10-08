@@ -886,7 +886,8 @@
   .listing-card-status {
     @apply absolute top-4 right-0 pl-4 pr-4 py-1 rounded-l-sm text-xs font-display font-semibold uppercase tracking-widest;
   }
-  /* Parade of Homes badge: sits under the status pill on the card image. */
+  /* Parade of Homes badge: tops the card image's right-hand stack, with the
+     status pill moved down beneath it. */
   .parade-badge {
     @apply inline-flex items-center text-xs font-display font-semibold uppercase tracking-widest whitespace-nowrap;
     background-color: var(--parade-badge-bg);
@@ -897,7 +898,8 @@
   .parade-badge--gold   { --parade-badge-bg: var(--parade-award-gold-bg);   --parade-badge-fg: var(--parade-award-gold-fg); }
   .parade-badge--silver { --parade-badge-bg: var(--parade-award-silver-bg); --parade-badge-fg: var(--parade-award-silver-fg); }
   .parade-badge--bronze { --parade-badge-bg: var(--parade-award-bronze-bg); --parade-badge-fg: var(--parade-award-bronze-fg); }
-  .listing-card-parade { @apply absolute top-12 right-0 pl-4 pr-4 py-1 rounded-l-sm; }
+  .listing-card-parade { @apply absolute top-4 right-0 pl-4 pr-4 py-1 rounded-l-sm; }
+  .listing-card-status--below { @apply top-12; }
   .listing-card-body  { @apply p-5; }
   .listing-card-title { @apply font-display text-lg text-earth-900 leading-snug mb-2 transition-colors duration-300; }
   .listing-card:hover .listing-card-title { color: var(--color-red-600); }

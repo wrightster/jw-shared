@@ -22,9 +22,15 @@ interface Props {
   listing: ApiListing;
   index?: number;
   headline?: string;
+  /** False hides the on-image parade badge — for a page that labels the
+   *  parade/award itself (e.g. a winners section's own header). */
+  paradeBadge?: boolean;
 }
 
-const { listing, headline, index } = Astro.props;
+const { listing, headline, index, paradeBadge = true } = Astro.props;
+// The parade badge leads the image's top-right stack; the status pill drops
+// below it.
+const showParade = paradeBadge && !!listing.parade;
 // Eager-load the first row (above the fold) so the LCP image isn't deferred;
 // flag the very first as high priority. Callers already thread `index` in.
 const eager = index != null && index < 3;
@@ -81,10 +87,10 @@ const priceValue = parseFloat(listing.list_price);
         <span aria-hidden="true">{listing.photo_count}</span>
       </span>
     )}
-    <span class="listing-card-status" data-status={listing.status}>
+    {showParade && <ParadeBadge parade={listing.parade!} class="listing-card-parade" />}
+    <span class:list={['listing-card-status', showParade && 'listing-card-status--below']} data-status={listing.status}>
       {listing.status_label}
     </span>
-    {listing.parade && <ParadeBadge parade={listing.parade} class="listing-card-parade" />}
   </div>
 
   <!-- Content -->
