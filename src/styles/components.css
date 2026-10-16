@@ -898,8 +898,10 @@
   .parade-badge--gold   { --parade-badge-bg: var(--parade-award-gold-bg);   --parade-badge-fg: var(--parade-award-gold-fg); }
   .parade-badge--silver { --parade-badge-bg: var(--parade-award-silver-bg); --parade-badge-fg: var(--parade-award-silver-fg); }
   .parade-badge--bronze { --parade-badge-bg: var(--parade-award-bronze-bg); --parade-badge-fg: var(--parade-award-bronze-fg); }
-  .listing-card-parade { @apply absolute top-4 right-0 pl-4 pr-4 py-1 rounded-l-sm; }
-  .listing-card-status--below { @apply top-12; }
+  .listing-card-parades { @apply absolute top-4 right-0 flex flex-col items-end gap-2; }
+  .listing-card-parade { @apply pl-4 pr-4 py-1 rounded-l-sm; }
+  /* One 1.5rem badge + 0.5rem gap per parade above the pill. */
+  .listing-card-status--below { top: calc(1rem + var(--parade-count, 1) * 2rem); }
   .listing-card-body  { @apply p-5; }
   .listing-card-title { @apply font-display text-lg text-earth-900 leading-snug mb-2 transition-colors duration-300; }
   .listing-card:hover .listing-card-title { color: var(--color-red-600); }

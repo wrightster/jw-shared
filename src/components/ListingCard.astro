@@ -15,7 +15,7 @@
 // dimensions (no layout shift); price is a <data> with the numeric value.
 
 import type { ApiListing } from '@jw/shared/api';
-import { formatPrice, photoSrc, photoSrcSet, photoDimensions, photoAlt } from '@jw/shared/api';
+import { formatPrice, paradeBadges, photoSrc, photoSrcSet, photoDimensions, photoAlt } from '@jw/shared/api';
 import ParadeBadge from './ParadeBadge.astro';
 
 interface Props {
@@ -28,9 +28,10 @@ interface Props {
 }
 
 const { listing, headline, index, paradeBadge = true } = Astro.props;
-// The parade badge leads the image's top-right stack; the status pill drops
-// below it.
-const showParade = paradeBadge && !!listing.parade;
+// The parade badges (one per parade — a home can win in two) lead the image's
+// top-right stack; the status pill drops below them.
+const parades = paradeBadge ? paradeBadges(listing) : [];
+const showParade = parades.length > 0;
 // Eager-load the first row (above the fold) so the LCP image isn't deferred;
 // flag the very first as high priority. Callers already thread `index` in.
 const eager = index != null && index < 3;
@@ -87,8 +88,16 @@ const priceValue = parseFloat(listing.list_price);
         <span aria-hidden="true">{listing.photo_count}</span>
       </span>
     )}
-    {showParade && <ParadeBadge parade={listing.parade!} class="listing-card-parade" />}
-    <span class:list={['listing-card-status', showParade && 'listing-card-status--below']} data-status={listing.status}>
+    {showParade && (
+      <span class="listing-card-parades">
+        {parades.map((p, i) => <ParadeBadge parade={p} mark={i === 0} class="listing-card-parade" />)}
+      </span>
+    )}
+    <span
+      class:list={['listing-card-status', showParade && 'listing-card-status--below']}
+      style={showParade ? `--parade-count: ${parades.length}` : undefined}
+      data-status={listing.status}
+    >
       {listing.status_label}
     </span>
   </div>

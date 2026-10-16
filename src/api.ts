@@ -246,6 +246,9 @@ export interface ApiListing {
   /** Parade of Homes badge: the home's entry in a current parade, else null.
    *  Always present on public REST; optional so older payloads still type. */
   parade?: ApiParadeRef | null;
+  /** Every parade badge, `parade` first — a home can win in more than one
+   *  parade (office ≥ 14.5.1). Read through `paradeBadges()`. */
+  parades?: ApiParadeRef[];
   // Detail-only
   photos?: ApiPhoto[];
   documents?: ApiDocument[];
@@ -587,6 +590,9 @@ export type ApiParadeAward = 'gold' | 'silver' | 'bronze';
 export interface ApiParadeRef {
   slug: string;
   name: string;
+  /** "Franklin County POH" — names the parade on award badges. Absent on
+   *  office builds older than 14.5.1. */
+  short_name?: string | null;
   entry_number: string | null;
   /** Absent on office builds older than 14.2.0. */
   award?: ApiParadeAward | null;
@@ -665,13 +671,23 @@ export function paradeAwardClass(award: string | null | undefined): string | und
 }
 
 /**
- * Badge text: "Parade of Homes", plus " · #14" when the entry number is set.
- * An award winner reads "Gold Award · Parade of Homes" instead (no number —
- * the badge has to fit on a card).
+ * Every parade badge a home carries (`parades`, `parade` first), falling back
+ * to the single `parade` on office builds older than 14.5.1.
  */
-export function paradeBadgeLabel(parade: Pick<ApiParadeRef, 'entry_number' | 'award'>): string {
+export function paradeBadges(home: { parade?: ApiParadeRef | null; parades?: ApiParadeRef[] }): ApiParadeRef[] {
+  if (home.parades?.length) return home.parades;
+  return home.parade ? [home.parade] : [];
+}
+
+/**
+ * Badge text: "Parade of Homes", plus " · #14" when the entry number is set.
+ * An award winner reads "Gold Award · Franklin County POH" instead — the
+ * parade's short name, else "Parade of Homes" (no number — the badge has to
+ * fit on a card).
+ */
+export function paradeBadgeLabel(parade: Pick<ApiParadeRef, 'entry_number' | 'award' | 'short_name'>): string {
   const award = paradeAwardLabel(parade.award);
-  if (award) return `${award} · Parade of Homes`;
+  if (award) return `${award} · ${parade.short_name?.trim() || 'Parade of Homes'}`;
   const n = parade.entry_number?.trim();
   return n ? `Parade of Homes · #${n}` : 'Parade of Homes';
 }

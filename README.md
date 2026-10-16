@@ -15,8 +15,8 @@ the shared version mirrors JWLC's shape. See `../../CLAUDE.md` and
   `fetchTeam`/`fetchNeighborhoods`/`fetchParade` (+ `?parade=` on listings), the `ApiListing`/`ApiPhoto`/`ApiDocument`
   types, image/format helpers, and a short in-process response memo.
 - **Components** — `ListingCard`, `ListingRow`, `ListingGallery`, `VideoSection`,
-  `LotMap`, `Seo`, `ParadeBadge` (shown on cards/rows when `listing.parade` is set;
-  emits `data-parade-entry`, themed via `--parade-badge-bg`/`--parade-badge-fg`; an award winner gets the `parade-badge--gold|silver|bronze` medal colours from `--parade-award-*` and reads "Gold Award · Parade of Homes" — `paradeAwardLabel`/`paradeAwardClass` in `api.ts`). Cards accept an `index` prop so the first row loads eagerly, and `paradeBadge={false}` to drop the badge where the page labels the parade itself; the badge sits above the status pill.
+  `LotMap`, `Seo`, `ParadeBadge` (one per parade the home is in — `paradeBadges(listing)` reads `listing.parades`, falling back to `listing.parade`;
+  the first emits `data-parade-entry`, themed via `--parade-badge-bg`/`--parade-badge-fg`; an award winner gets the `parade-badge--gold|silver|bronze` medal colours from `--parade-award-*` and reads "Gold Award · Franklin County POH" from the parade's `short_name`, else "· Parade of Homes" — `paradeAwardLabel`/`paradeAwardClass`/`paradeBadgeLabel` in `api.ts`). Cards accept an `index` prop so the first row loads eagerly, and `paradeBadge={false}` to drop the badge where the page labels the parade itself; the badges stack above the status pill.
 - **Styles** — `styles/tokens.css` (brand palette; text steps meet WCAG AA) and
   `styles/components.css` (page/component classes; per-site chrome stays local).
 - **JSON-LD** (`@jw/shared/jsonLd`) and the `lotMap` geometry types. Community/lot
