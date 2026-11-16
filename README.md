@@ -14,6 +14,11 @@ the shared version mirrors JWLC's shape. See `../../CLAUDE.md` and
 - **API client + types** (`@jw/shared/api`) — `fetchListings`/`fetchListing`/
   `fetchTeam`/`fetchNeighborhoods`/`fetchParade` (+ `?parade=` on listings), the `ApiListing`/`ApiPhoto`/`ApiDocument`
   types, image/format helpers, and a short in-process response memo.
+- **Public statuses** — a public page shows only **Available / Pending / Sold**.
+  `publicStatus()` (listings: active + coming_soon → available) and `publicLotStatus()`
+  (lots: available + builder-reserved → available, under_contract → pending,
+  not_released/common_area → null, i.e. not shown); `normalizeListingLabel()` rewrites
+  `status_label` to the public word. `LotMap` takes the public statuses (`--lot-pending-*`).
 - **Components** — `ListingCard`, `ListingRow`, `ListingGallery`, `VideoSection`,
   `LotMap`, `Seo`, `ParadeBadge` (one per parade the home is in — `paradeBadges(listing)` reads `listing.parades`, falling back to `listing.parade`;
   the first emits `data-parade-entry`, themed via `--parade-badge-bg`/`--parade-badge-fg`; an award winner gets the `parade-badge--gold|silver|bronze` medal colours from `--parade-award-*` and reads "Gold Award · Franklin County POH" from the parade's `short_name`, else "· Parade of Homes" — `paradeAwardLabel`/`paradeAwardClass`/`paradeBadgeLabel` in `api.ts`). Cards accept an `index` prop so the first row loads eagerly, and `paradeBadge={false}` to drop the badge where the page labels the parade itself; the badges stack above the status pill.
