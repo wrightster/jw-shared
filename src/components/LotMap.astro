@@ -46,7 +46,7 @@ const {
 } = Astro.props;
 
 const statusLabel = (s: LotMapLot['status']) =>
-  s === 'available' ? 'Available' : s === 'reserved' ? 'Reserved' : 'Sold';
+  s === 'available' ? 'Available' : s === 'pending' ? 'Pending' : 'Sold';
 
 const fmtAcres = (a: number | null | undefined) =>
   a && a > 0 ? `${a.toLocaleString('en-US', { maximumFractionDigits: 3 })} ac` : '';
@@ -137,7 +137,7 @@ const placed = lots
   {legend && placed.length > 0 && (
     <ul class="lot-map-legend" aria-hidden="true">
       <li data-status="available"><span></span>Available</li>
-      <li data-status="reserved"><span></span>Reserved</li>
+      <li data-status="pending"><span></span>Pending</li>
       <li data-status="sold"><span></span>Sold</li>
     </ul>
   )}
@@ -156,8 +156,8 @@ const placed = lots
     --_fill-opacity-hover: var(--lot-fill-opacity-hover, 0.58);
     --_available-fill: var(--lot-available-fill, #5a7d63);
     --_available-stroke: var(--lot-available-stroke, #3f5a47);
-    --_reserved-fill: var(--lot-reserved-fill, #c79a3f);
-    --_reserved-stroke: var(--lot-reserved-stroke, #9a7628);
+    --_pending-fill: var(--lot-pending-fill, #c79a3f);
+    --_pending-stroke: var(--lot-pending-stroke, #9a7628);
     --_sold-fill: var(--lot-sold-fill, #9e5563);
     --_sold-stroke: var(--lot-sold-stroke, #7c4654);
     --_card-bg: var(--lot-card-bg, #ffffff);
@@ -212,7 +212,7 @@ const placed = lots
   }
 
   .lot-hotspot[data-status='available'] { --hs-fill: var(--_available-fill); --hs-stroke: var(--_available-stroke); }
-  .lot-hotspot[data-status='reserved']  { --hs-fill: var(--_reserved-fill);  --hs-stroke: var(--_reserved-stroke); }
+  .lot-hotspot[data-status='pending']  { --hs-fill: var(--_pending-fill);  --hs-stroke: var(--_pending-stroke); }
   .lot-hotspot[data-status='sold']      { --hs-fill: var(--_sold-fill);      --hs-stroke: var(--_sold-stroke); }
 
   .lot-hotspot:hover .lot-hotspot-fill,
@@ -313,7 +313,7 @@ const placed = lots
     flex: none;
   }
   .lotmap-card-status[data-status='available'] { background: var(--_available-stroke); }
-  .lotmap-card-status[data-status='reserved']  { background: var(--_reserved-stroke); }
+  .lotmap-card-status[data-status='pending']  { background: var(--_pending-stroke); }
   .lotmap-card-status[data-status='sold']      { background: var(--_sold-stroke); }
 
   .lotmap-card-facts {
@@ -376,7 +376,7 @@ const placed = lots
     opacity: 0.85;
   }
   .lot-map-legend li[data-status='available'] span { background: var(--_available-fill); border-color: var(--_available-stroke); }
-  .lot-map-legend li[data-status='reserved'] span  { background: var(--_reserved-fill);  border-color: var(--_reserved-stroke); }
+  .lot-map-legend li[data-status='pending'] span  { background: var(--_pending-fill);  border-color: var(--_pending-stroke); }
   .lot-map-legend li[data-status='sold'] span      { background: var(--_sold-fill);      border-color: var(--_sold-stroke); }
 
   @media (prefers-reduced-motion: reduce) {

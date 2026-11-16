@@ -37,7 +37,8 @@ export interface LotMapBuilder {
 export interface LotMapLot {
   id: string;
   number: string;
-  status: 'available' | 'reserved' | 'sold';
+  /** Public status (see `publicLotStatus` in `@jw/shared/api`). */
+  status: 'available' | 'pending' | 'sold';
   acres?: number | null;
   /** optional asking price; number or preformatted string */
   price?: number | string | null;

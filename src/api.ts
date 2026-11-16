@@ -290,13 +290,40 @@ export function publicStatus(status: ApiListing['status']): PublicStatus {
   }
 }
 
+/** The only status words a public site shows: Available, Pending, Sold. */
+export const PUBLIC_STATUS_LABEL: Record<PublicStatus, string> = {
+  available: 'Available',
+  pending: 'Pending',
+  sold: 'Sold',
+};
+
 /**
- * JWLC's label rewrite: surface 'active' listings as "Available" instead of
- * "Active". Opt-in — each site's shim decides whether to apply it.
+ * Office LOT status → public status. A lot `reserved` for (assigned to) a
+ * builder is still for sale, so it shows as Available. `not_released` and
+ * `common_area` parcels aren't on the market and return null: sites drop them.
+ */
+export function publicLotStatus(status: string | null | undefined): PublicStatus | null {
+  switch (status) {
+    case 'available':
+    case 'reserved':
+      return 'available';
+    case 'pending':
+    case 'under_contract':
+      return 'pending';
+    case 'sold':
+      return 'sold';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Rewrite a listing's `status_label` to its public word (Available / Pending /
+ * Sold) — the office's own labels ("Active", "Coming Soon", "Under Contract")
+ * never reach a public page. `status` itself is left raw for filtering.
  */
 export function normalizeListingLabel(listing: ApiListing): ApiListing {
-  if (listing.status === 'active') return { ...listing, status_label: 'Available' };
-  return listing;
+  return { ...listing, status_label: PUBLIC_STATUS_LABEL[publicStatus(listing.status)] };
 }
 
 // ---------- Formatters ----------

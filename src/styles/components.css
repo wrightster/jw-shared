@@ -689,8 +689,8 @@
   }
   /* Shared status colors — applied via :is() to avoid repeating across badge variants */
   :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="available"],
-  :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="active"]         { @apply bg-red-600 text-earth-50; }
-  :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="coming_soon"]    { @apply bg-earth-200 text-earth-900; }
+  :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="active"],
+  :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="coming_soon"]    { @apply bg-red-600 text-earth-50; }
   :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="pending"],
   :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="under_contract"] { @apply bg-gold-300 text-earth-900; }
   :is(.listing-status-badge, .listing-card-status, .listing-row-status)[data-status="sold"]           { @apply bg-earth-900 text-light-text; }

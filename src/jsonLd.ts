@@ -340,8 +340,8 @@ export function isSellableLot(lot: { status: LotStatus }): boolean {
 function lotAvailability(status: LotStatus): string | undefined {
   switch (status) {
     case 'available':
+    case 'reserved': // assigned to a builder, still for sale
       return 'https://schema.org/InStock';
-    case 'reserved':
     case 'under_contract':
       return 'https://schema.org/LimitedAvailability';
     case 'sold':
@@ -444,7 +444,7 @@ export function neighborhoodJsonLd(
       {
         '@type': 'PropertyValue',
         name: `Available ${label}s`,
-        value: sellable.filter((l) => l.status === 'available').length,
+        value: sellable.filter((l) => l.status === 'available' || l.status === 'reserved').length,
       },
     ];
 

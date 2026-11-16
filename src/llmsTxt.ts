@@ -39,8 +39,10 @@ export interface NeighborhoodLlmsTxtInput {
 
 const STATUS_LABEL: Record<string, string> = {
   available: 'available',
-  reserved: 'reserved',
-  under_contract: 'under contract',
+  // Public words only: a builder-reserved lot is still available.
+  reserved: 'available',
+  pending: 'pending',
+  under_contract: 'pending',
   sold: 'sold',
   common_area: 'common area',
 };
@@ -78,7 +80,7 @@ export function neighborhoodLlmsTxt(input: NeighborhoodLlmsTxtInput): string {
   // A prose line stating the facts a model would otherwise have to infer by
   // counting cards on the lots page.
   if (lots.length) {
-    const available = lots.filter((l) => l.status === 'available').length;
+    const available = lots.filter((l) => l.status === 'available' || l.status === 'reserved').length;
     const acreages = lots
       .map((l) => l.acres)
       .filter((a): a is number => typeof a === 'number' && a > 0);
