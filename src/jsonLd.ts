@@ -278,6 +278,7 @@ export function brokerageJsonLd(info: BrokerageInfo): Record<string, unknown> {
 export type LotStatus =
   | 'available'
   | 'reserved'
+  | 'pending'
   | 'under_contract'
   | 'sold'
   | 'common_area';
@@ -342,6 +343,7 @@ function lotAvailability(status: LotStatus): string | undefined {
     case 'available':
     case 'reserved': // assigned to a builder, still for sale
       return 'https://schema.org/InStock';
+    case 'pending':
     case 'under_contract':
       return 'https://schema.org/LimitedAvailability';
     case 'sold':
