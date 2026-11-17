@@ -256,19 +256,6 @@ const totalImages = photos.length;
 
   let lightboxTrigger = null;
 
-  function applyImageCrop() {
-    if (!lbImage || !lbImage.naturalWidth) return;
-    var ratio = lbImage.naturalWidth / lbImage.naturalHeight;
-    lbImage.classList.remove('crop-landscape', 'crop-portrait');
-    if (ratio > 16 / 9) {
-      lbImage.classList.add('crop-landscape');
-    } else if (ratio < 9 / 16) {
-      lbImage.classList.add('crop-portrait');
-    }
-  }
-
-  if (lbImage) lbImage.addEventListener('load', applyImageCrop);
-
   function openLightbox(index, trigger) {
     currentIndex = index;
     lightboxTrigger = trigger ?? null;

@@ -825,16 +825,6 @@
   .lightbox-nav-icon { @apply w-12 h-12 pointer-events-none; }
   .lightbox-body     { @apply relative z-10 max-w-6xl max-h-[85vh] mx-auto px-32; }
   .lightbox-img      { @apply max-w-full max-h-[85vh] object-contain mx-auto transition-opacity duration-150; }
-  .lightbox-img.crop-landscape {
-    aspect-ratio: 16/9;
-    object-fit: cover;
-    max-width: min(100%, calc(85vh * 16 / 9));
-  }
-  .lightbox-img.crop-portrait {
-    aspect-ratio: 9/16;
-    object-fit: cover;
-    max-width: min(100%, calc(85vh * 9 / 16));
-  }
   .lightbox-counter  { @apply absolute bottom-6 left-1/2 -translate-x-1/2 z-10 text-earth-50/60 text-sm; }
   @media (max-width: 767px) {
     .lightbox-body { padding-left: 1rem; padding-right: 1rem; padding-bottom: 8rem; }
