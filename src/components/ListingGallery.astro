@@ -29,6 +29,15 @@ const heroSrcsetList = photos.map((p) => photoSrcSet(p, 'jpg'));
 const heroSizes = sizes;
 const heroDims = photoDimensions(photos[0], 1200);
 const totalImages = photos.length;
+// The inline frame is 16:9 and fills it with object-fit: cover, which would cut
+// the sides off anything wider (panoramas, wide exteriors). Those photos are
+// fitted whole instead, letterboxed top and bottom. `null` = dimensions unknown;
+// the script measures the decoded image in that case.
+const FRAME_RATIO = 16 / 9;
+const wideList = photos.map((p) => {
+  const d = photoDimensions(p, 1200);
+  return d ? d.width / d.height > FRAME_RATIO + 0.01 : null;
+});
 ---
 
 <div class="listing-gallery-inset">
@@ -48,7 +57,7 @@ const totalImages = photos.length;
         width={heroDims?.width}
         height={heroDims?.height}
         alt={alt}
-        class="gallery-main-img"
+        class:list={['gallery-main-img', wideList[0] && 'is-wide']}
         id="main-image"
         loading="eager"
         fetchpriority="high"
@@ -112,7 +121,7 @@ const totalImages = photos.length;
   <div class="lightbox-counter" id="lb-counter"></div>
 </div>
 
-<script define:vars={{ imageList, fullImageList, totalImages, heroSrcsetList, heroSizes }}>
+<script define:vars={{ imageList, fullImageList, totalImages, heroSrcsetList, heroSizes, wideList, FRAME_RATIO }}>
   let currentIndex = 0;
 
   const mainImage = document.getElementById('main-image');
@@ -174,7 +183,7 @@ const totalImages = photos.length;
   }
 
   // Swap a visible <img> onto a new source without ever showing an empty frame.
-  async function crossFade(img, targetOpacity, { src, srcset, sizes, alt }) {
+  async function crossFade(img, targetOpacity, { src, srcset, sizes, alt, onSwap }) {
     const seq = bumpSeq(img);
 
     await preload(src, srcset, sizes);
@@ -192,9 +201,30 @@ const totalImages = photos.length;
       img.removeAttribute('sizes');
     }
     if (alt != null) img.alt = alt;
+    onSwap?.();
     img.src = src;
     showWhenDecoded(img, targetOpacity, seq);
   }
+
+  // Letterbox (object-fit: contain) photos wider than the 16:9 frame so their
+  // sides aren't cropped. Uses the API dimensions when known, else measures the
+  // decoded image.
+  function applyWide(img, index) {
+    const known = wideList[index];
+    if (known !== null && known !== undefined) {
+      img.classList.toggle('is-wide', known);
+      return;
+    }
+    img.classList.remove('is-wide');
+    const measure = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        img.classList.toggle('is-wide', img.naturalWidth / img.naturalHeight > FRAME_RATIO + 0.01);
+      }
+    };
+    if (img.complete) measure();
+    else img.addEventListener('load', measure, { once: true });
+  }
+  if (mainImage) applyWide(mainImage, 0);
 
   // Point a hidden <img> at a source and reveal it once it can actually paint.
   function showSource(img, src, targetOpacity) {
@@ -231,6 +261,7 @@ const totalImages = photos.length;
         src: imageList[index],
         srcset: heroSrcsetList[index] || null,
         sizes: heroSizes,
+        onSwap: () => applyWide(mainImage, index),
       });
     }
     if (counter) counter.textContent = `${index + 1} / ${totalImages}`;

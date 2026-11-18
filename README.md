@@ -20,7 +20,8 @@ the shared version mirrors JWLC's shape. See `../../CLAUDE.md` and
   not_released/common_area → null, i.e. not shown); `normalizeListingLabel()` rewrites
   `status_label` to the public word. `LotMap` takes the public statuses (`--lot-pending-*`).
 - **Components** — `ListingCard`, `ListingRow`, `ListingGallery` (its lightbox always shows the
-  whole photo, `object-contain`; panoramas are letterboxed, never cropped), `VideoSection`,
+  whole photo, `object-contain`; the inline 16:9 hero fills its frame but letterboxes any photo
+  wider than 16:9 (`.is-wide`), so panoramas are never cropped), `VideoSection`,
   `LotMap`, `Seo`, `ParadeBadge` (one per parade the home is in — `paradeBadges(listing)` reads `listing.parades`, falling back to `listing.parade`;
   the first emits `data-parade-entry`, themed via `--parade-badge-bg`/`--parade-badge-fg`; an award winner gets the `parade-badge--gold|silver|bronze` medal colours from `--parade-award-*` and reads "Gold Award · Franklin County POH" from the parade's `short_name`, else "· Parade of Homes" — `paradeAwardLabel`/`paradeAwardClass`/`paradeBadgeLabel` in `api.ts`). Cards accept an `index` prop so the first row loads eagerly, and `paradeBadge={false}` to drop the badge where the page labels the parade itself; the badges stack above the status pill.
 - **Styles** — `styles/tokens.css` (brand palette; text steps meet WCAG AA) and

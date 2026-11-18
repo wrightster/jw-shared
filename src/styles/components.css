@@ -654,9 +654,12 @@
     @apply bg-earth-50 rounded-b-sm mb-8 p-4 md:p-5;
   }
   .gallery-main-wrap {
-    @apply relative aspect-[16/9] overflow-hidden cursor-pointer rounded-sm w-full md:w-4/5 mx-auto;
+    @apply relative aspect-[16/9] overflow-hidden cursor-pointer rounded-sm w-full md:w-4/5 mx-auto bg-earth-900;
   }
   .gallery-main-img  { @apply w-full h-full object-cover transition-opacity duration-150; }
+  /* Wider than the 16:9 frame (panoramas): show the whole photo, letterboxed on
+     the frame's dark ground, instead of cropping its sides. */
+  .gallery-main-img.is-wide { @apply object-contain; }
   .gallery-gradient  {
     @apply absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-earth-900/60 to-transparent pointer-events-none;
   }
